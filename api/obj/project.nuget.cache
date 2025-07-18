@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "e87ns67gpgw=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\amine\\OneDrive\\Desktop\\CabinetDentaire\\Dental-reservation\\api\\api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\amine\\.nuget\\packages\\microsoft.aspnetcore.openapi\\9.0.7\\microsoft.aspnetcore.openapi.9.0.7.nupkg.sha512",
+    "C:\\Users\\amine\\.nuget\\packages\\microsoft.openapi\\1.6.17\\microsoft.openapi.1.6.17.nupkg.sha512"
+  ],
+  "logs": []
+}
