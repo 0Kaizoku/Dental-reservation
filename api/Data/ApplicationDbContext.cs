@@ -11,6 +11,8 @@ namespace Dental_reservation.api.Data
         }
         
         public DbSet<User> Users { get; set; }
-      
+        public DbSet<PopPersonne> PopPersonnes { get; set; }
+        public DbSet<PopContratPersonne> PopContratPersonnes { get; set; }
+        public DbSet<PopAdresseP> PopAdressePs { get; set; }
     }
 } 
