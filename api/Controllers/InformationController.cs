@@ -79,18 +79,20 @@ namespace Dental_reservation.api.Controllers
         [HttpGet("collectivite/{codeCollectivite}")]
         public async Task<ActionResult<CollectiviteDto>> GetCollectivite(string codeCollectivite)
         {
-            var personne = await _context.PopPersonnes
-                .FirstOrDefaultAsync(p => p.CodeCollectivitePer == codeCollectivite);
+            var collectivite = await _context.collectivites
+                .FirstOrDefaultAsync(c => c.CodeCollectivite == codeCollectivite);
 
-            if (personne == null)
+            if (collectivite == null)
             {
                 return NotFound();
             }
 
             var collectiviteDto = new CollectiviteDto
             {
-                CodeCollectivite = personne.CodeCollectivitePer,
-                // RaisonSociale, Adresse, and Ville are not in the database schema
+                CodeCollectivite = collectivite.CodeCollectivite,
+                RaisonSociale = collectivite.RaisonSociale,
+                Adresse = collectivite.Adresse,
+                Ville = collectivite.Ville
             };
 
             return Ok(collectiviteDto);
