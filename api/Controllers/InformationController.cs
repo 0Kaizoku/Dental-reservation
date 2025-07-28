@@ -41,9 +41,10 @@ namespace Dental_reservation.api.Controllers
                 DateNaissance = personne.DateNaissancePer,
                 Adresse = $"{adresse?.AuxiliaireAdresse1Per} {adresse?.AuxiliaireAdresse2Per} {adresse?.NomLieuDitPer}".Trim(),
                 Matricule = personne.NumSecuOdPer,
+                NCIN = personne.CIN,
                 EtatBnf = personne.CodeStatutPer,
                 Qualite = personne.CodeQualitePersonnePer,
-                // NCIN and Ville are not in the database schema
+                // Ville is not in the database schema
             };
 
             return Ok(beneficiaireDto);
@@ -70,7 +71,8 @@ namespace Dental_reservation.api.Controllers
                 DateNaissance = personne.DateNaissancePer,
                 CodeProduit = contrat?.CodeProduit,
                 Matricule = personne.NumSecuOdPer,
-                // NCIN and LibProduit are not in the database schema
+                NCIN = personne.CIN,
+                // LibProduit is not in the database schema
             };
 
             return Ok(assureDto);
