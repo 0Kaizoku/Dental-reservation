@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Dental_reservation.api.Controllers
 {
-    [Authorize]
+    // [Authorize] // Temporarily disabled for testing
     [ApiController]
     [Route("api/[controller]")]
     public class PatientsController : ControllerBase
@@ -20,13 +20,139 @@ namespace Dental_reservation.api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] string? name)
+        public async Task<IActionResult> GetAll([FromQuery] string? name, [FromQuery] string? status)
         {
-            var query = _context.PopPersonnes.AsQueryable();
-            if (!string.IsNullOrEmpty(name))
-                query = query.Where(p => p.NomPer.Contains(name) || p.PrenomPer.Contains(name));
-            var patients = await query.ToListAsync();
-            return Ok(patients);
+            try
+            {
+                var query = _context.PopPersonnes.AsQueryable();
+                
+                // Filter by name if provided
+                if (!string.IsNullOrEmpty(name))
+                {
+                    query = query.Where(p => 
+                        (p.NomPer != null && p.NomPer.Contains(name)) || 
+                        (p.PrenomPer != null && p.PrenomPer.Contains(name)));
+                }
+
+                var patients = await query.ToListAsync();
+                
+                // Map to DTOs
+                var patientDtos = patients.Select(p => new PatientDto
+                {
+                    Id = (int)p.IdNumPersonne,
+                    Name = $"{p.PrenomPer ?? ""} {p.NomPer ?? ""}".Trim(),
+                    // Email = $"patient.{p.IdNumPersonne}@example.com", // TODO: Add email field to database
+                    Email = "", // Placeholder for future development
+                    // Phone = $"+33 1 {p.IdNumPersonne.ToString().PadLeft(8, '0')}", // TODO: Add phone field to database
+                    Phone = "", // Placeholder for future development
+                    DateOfBirth = p.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
+                    Gender = p.CodeSexePer == "1" ? "Male" : p.CodeSexePer == "2" ? "Female" : "Unknown",
+                    // LastVisit = "", // TODO: Populate from appointments table
+                    LastVisit = "",
+                    // NextAppointment = "", // TODO: Populate from appointments table
+                    NextAppointment = "",
+                    Status = "active", // Default status - TODO: Calculate based on last visit
+                    // MedicalHistory = new string[] { "Initial consultation" }, // TODO: Add medical history table
+                    MedicalHistory = new string[] { }, // Placeholder for future development
+                    // Insurance = "Standard Insurance", // TODO: Add insurance information
+                    Insurance = "", // Placeholder for future development
+                    EmergencyContact = new EmergencyContactDto
+                    {
+                        // Name = "Emergency Contact", // TODO: Add emergency contact fields
+                        Name = "",
+                        // Phone = "+33 1 23456789", // TODO: Add emergency contact phone
+                        Phone = "",
+                        // Relationship = "Family" // TODO: Add relationship field
+                        Relationship = ""
+                    }
+                }).ToList();
+
+                // Filter by status if provided
+                if (!string.IsNullOrEmpty(status) && status != "all")
+                {
+                    patientDtos = patientDtos.Where(p => p.Status == status).ToList();
+                }
+
+                return Ok(patientDtos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving patients", error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            try
+            {
+                var patient = await _context.PopPersonnes
+                    .FirstOrDefaultAsync(p => p.IdNumPersonne == id);
+
+                if (patient == null)
+                {
+                    return NotFound(new { message = "Patient not found" });
+                }
+
+                var patientDto = new PatientDto
+                {
+                    Id = (int)patient.IdNumPersonne,
+                    Name = $"{patient.PrenomPer ?? ""} {patient.NomPer ?? ""}".Trim(),
+                    // Email = $"patient.{patient.IdNumPersonne}@example.com", // TODO: Add email field to database
+                    Email = "", // Placeholder for future development
+                    // Phone = $"+33 1 {patient.IdNumPersonne.ToString().PadLeft(8, '0')}", // TODO: Add phone field to database
+                    Phone = "", // Placeholder for future development
+                    DateOfBirth = patient.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
+                    Gender = patient.CodeSexePer == "1" ? "Male" : patient.CodeSexePer == "2" ? "Female" : "Unknown",
+                    // LastVisit = "", // TODO: Populate from appointments table
+                    LastVisit = "",
+                    // NextAppointment = "", // TODO: Populate from appointments table
+                    NextAppointment = "",
+                    Status = "active", // Default status - TODO: Calculate based on last visit
+                    // MedicalHistory = new string[] { "Initial consultation" }, // TODO: Add medical history table
+                    MedicalHistory = new string[] { }, // Placeholder for future development
+                    // Insurance = "Standard Insurance", // TODO: Add insurance information
+                    Insurance = "", // Placeholder for future development
+                    EmergencyContact = new EmergencyContactDto
+                    {
+                        // Name = "Emergency Contact", // TODO: Add emergency contact fields
+                        Name = "",
+                        // Phone = "+33 1 23456789", // TODO: Add emergency contact phone
+                        Phone = "",
+                        // Relationship = "Family" // TODO: Add relationship field
+                        Relationship = ""
+                    }
+                };
+
+                return Ok(patientDto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving patient", error = ex.Message });
+            }
+        }
+
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetStats()
+        {
+            try
+            {
+                var totalPatients = await _context.PopPersonnes.CountAsync();
+                
+                var stats = new
+                {
+                    total = totalPatients,
+                    active = totalPatients, // All patients are considered active for now
+                    newPatients = 0, // TODO: Calculate based on creation date
+                    inactive = 0 // TODO: Calculate based on last visit
+                };
+
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving stats", error = ex.Message });
+            }
         }
     }
 } 

@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Appointments from "./pages/Appointments";
+import Patients from "./pages/Patients";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/DashboardLayout";
 
@@ -24,7 +25,7 @@ const App = () => (
           <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
           <Route path="/calendar" element={<DashboardLayout><Calendar /></DashboardLayout>} />
           <Route path="/appointments" element={<DashboardLayout><Appointments /></DashboardLayout>} />
-          <Route path="/patients" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Patients - Coming Soon</h1></div></DashboardLayout>} />
+          <Route path="/patients" element={<DashboardLayout><Patients /></DashboardLayout>} />
           <Route path="/slots" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Available Slots - Coming Soon</h1></div></DashboardLayout>} />
           <Route path="/settings" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Settings - Coming Soon</h1></div></DashboardLayout>} />
           <Route path="*" element={<NotFound />} />

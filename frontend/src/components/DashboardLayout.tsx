@@ -58,7 +58,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </div>
 
               {/* Right side actions */}
-              <div className="flex items-center gap-3">
+              <div className="ml-auto flex items-center gap-3">
                 {/* Notifications */}
                 <Button
                   variant="ghost"
