@@ -26,13 +26,31 @@ export interface PatientStats {
   inactive: number;
 }
 
+// Backend RdvPatient shape
+export interface RdvPatient {
+  numRdv?: number; // double in backend, optional for create
+  idPersonne?: number | null;
+  numCabinet?: string | null;
+  dateRdv?: string | null; // ISO date string
+  heure?: string | null; // HH:mm
+  duree?: string | null;
+  observation?: string | null;
+  nomPs?: string | null;
+  dateSuppression?: string | null;
+  natureSoin?: string | null;
+  nomPer?: string | null;
+  qualitePer?: string | null;
+  collectivitePe?: string | null;
+  agent?: string | null;
+  nomAssure?: string | null;
+}
+
 class ApiService {
   private getAuthHeaders(): HeadersInit {
     const token = localStorage.getItem('authToken');
     return {
       'Content-Type': 'application/json',
-      // Temporarily disabled authentication for testing
-      // ...(token && { Authorization: `Bearer ${token}` })
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
     };
   }
 
@@ -45,18 +63,19 @@ class ApiService {
   }
 
   // Authentication
-  async login(email: string, password: string): Promise<{ token: string; user: any }> {
+  async login(username: string, password: string): Promise<{ token: string }> {
     const response = await fetch(`${API_BASE_URL}/Auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
 
-    const data = await this.handleResponse<{ token: string; user: any }>(response);
-    localStorage.setItem('authToken', data.token);
-    return data;
+    const data = await this.handleResponse<any>(response);
+    const token: string = data.token || data.Token;
+    if (token) localStorage.setItem('authToken', token);
+    return { token };
   }
 
   async logout(): Promise<void> {
@@ -90,6 +109,48 @@ class ApiService {
     });
 
     return this.handleResponse<PatientStats>(response);
+  }
+
+  // Appointments (RendezVous)
+  async getAppointments(params?: { patient?: string; doctor?: string; date?: string; }): Promise<RdvPatient[]> {
+    const search = new URLSearchParams();
+    if (params?.patient) search.append('patient', params.patient);
+    if (params?.doctor) search.append('doctor', params.doctor);
+    if (params?.date) search.append('date', params.date);
+
+    const response = await fetch(`${API_BASE_URL}/RendezVous?${search.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<RdvPatient[]>(response);
+  }
+
+  async createAppointment(rdv: RdvPatient): Promise<RdvPatient> {
+    const response = await fetch(`${API_BASE_URL}/RendezVous`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(rdv),
+    });
+    return this.handleResponse<RdvPatient>(response);
+  }
+
+  async updateAppointment(numRdv: number, rdv: RdvPatient): Promise<RdvPatient> {
+    const response = await fetch(`${API_BASE_URL}/RendezVous/${numRdv}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(rdv),
+    });
+    return this.handleResponse<RdvPatient>(response);
+  }
+
+  async deleteAppointment(numRdv: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/RendezVous/${numRdv}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok && response.status !== 204) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
   }
 
   // Check if user is authenticated

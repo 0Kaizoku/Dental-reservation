@@ -29,10 +29,44 @@ import {
   Phone,
   Mail
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/components/ui/use-toast";
 
 const Patients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const { toast } = useToast();
+
+  // Modal and form state
+  const [openNewPatient, setOpenNewPatient] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("");
+  const [cin, setCin] = useState("");
+  const [matricule, setMatricule] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Patient saved (preview)",
+      description: `${firstName} ${lastName} has been captured. Backend save to be wired.`,
+    });
+    setOpenNewPatient(false);
+    setFirstName("");
+    setLastName("");
+    setDob("");
+    setGender("");
+    setCin("");
+    setMatricule("");
+  };
 
   // Mock patients data
   const patients = [
@@ -116,10 +150,59 @@ const Patients = () => {
             Manage and view all patients
           </p>
         </div>
-        <Button className="bg-primary hover:bg-primary-hover">
-          <Plus className="w-4 h-4 mr-2" />
-          New Patient
-        </Button>
+        <Dialog open={openNewPatient} onOpenChange={setOpenNewPatient}>
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary-hover">
+              <Plus className="w-4 h-4 mr-2" />
+              New Patient
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>New Patient</DialogTitle>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">First name</Label>
+                  <Input id="firstName" placeholder="e.g. Sarah" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Last name</Label>
+                  <Input id="lastName" placeholder="e.g. Johnson" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="dob">Date of birth</Label>
+                  <Input id="dob" type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger id="gender">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Male</SelectItem>
+                      <SelectItem value="2">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="cin">CIN</Label>
+                  <Input id="cin" placeholder="e.g. AA123456" value={cin} onChange={(e) => setCin(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="matricule">Matricule</Label>
+                  <Input id="matricule" placeholder="e.g. 123456789" value={matricule} onChange={(e) => setMatricule(e.target.value)} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setOpenNewPatient(false)}>Cancel</Button>
+                <Button type="submit">Save Patient</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Filters and Search */}

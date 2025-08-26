@@ -18,6 +18,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import NotificationsPanel from "@/components/NotificationsPanel";
+import { useToastNotifications } from "@/hooks/use-toast";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -26,6 +29,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { notifications } = useToastNotifications();
 
   const handleLogout = () => {
     toast({
@@ -60,17 +64,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               {/* Right side actions */}
               <div className="ml-auto flex items-center gap-3">
                 {/* Notifications */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 relative"
-                >
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-destructive rounded-full text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
-                    3
-                  </span>
-                  <span className="sr-only">Notifications</span>
-                </Button>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 relative"
+                    >
+                      <Bell className="h-4 w-4" />
+                      {notifications.length > 0 && (
+                        <span className="absolute -top-1 -right-1 min-h-4 min-w-4 px-1 bg-destructive rounded-full text-[10px] font-medium text-destructive-foreground flex items-center justify-center">
+                          {notifications.length}
+                        </span>
+                      )}
+                      <span className="sr-only">Notifications</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[380px] sm:w-[420px]">
+                    <SheetHeader>
+                      <SheetTitle>Notifications</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4">
+                      <NotificationsPanel />
+                    </div>
+                  </SheetContent>
+                </Sheet>
 
                 {/* User menu */}
                 <DropdownMenu>

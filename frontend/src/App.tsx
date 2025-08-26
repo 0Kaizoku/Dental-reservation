@@ -11,6 +11,8 @@ import Appointments from "./pages/Appointments";
 import Patients from "./pages/Patients";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/DashboardLayout";
+import { AppointmentsProvider } from "./hooks/useAppointments";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -19,18 +21,21 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-          <Route path="/calendar" element={<DashboardLayout><Calendar /></DashboardLayout>} />
-          <Route path="/appointments" element={<DashboardLayout><Appointments /></DashboardLayout>} />
-          <Route path="/patients" element={<DashboardLayout><Patients /></DashboardLayout>} />
-          <Route path="/slots" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Available Slots - Coming Soon</h1></div></DashboardLayout>} />
-          <Route path="/settings" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Settings - Coming Soon</h1></div></DashboardLayout>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppointmentsProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Login />} />
+            <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+            <Route path="/calendar" element={<DashboardLayout><Calendar /></DashboardLayout>} />
+            <Route path="/appointments" element={<DashboardLayout><Appointments /></DashboardLayout>} />
+            <Route path="/patients" element={<DashboardLayout><Patients /></DashboardLayout>} />
+            <Route path="/profile" element={<DashboardLayout><Profile /></DashboardLayout>} />
+            <Route path="/slots" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Available Slots - Coming Soon</h1></div></DashboardLayout>} />
+            <Route path="/settings" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Settings - Coming Soon</h1></div></DashboardLayout>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AppointmentsProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
