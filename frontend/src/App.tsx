@@ -12,6 +12,7 @@ import Patients from "./pages/Patients";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/DashboardLayout";
 import { AppointmentsProvider } from "./hooks/useAppointments";
+import { AuthProvider } from "./hooks/use-auth";
 import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
@@ -21,8 +22,9 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AppointmentsProvider>
-        <BrowserRouter>
+      <AuthProvider>
+        <AppointmentsProvider>
+          <BrowserRouter>
           <Routes>
             <Route path="/" element={<Login />} />
             <Route path="/dashboard" element={<DashboardLayout><Dashboard /></DashboardLayout>} />
@@ -34,8 +36,9 @@ const App = () => (
             <Route path="/settings" element={<DashboardLayout><div className="p-6"><h1 className="text-2xl">Settings - Coming Soon</h1></div></DashboardLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </AppointmentsProvider>
+                  </BrowserRouter>
+        </AppointmentsProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

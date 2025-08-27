@@ -21,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import NotificationsPanel from "@/components/NotificationsPanel";
 import { useToastNotifications } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -30,8 +31,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { notifications } = useToastNotifications();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
+    logout(); // Use the logout function from useAuth
     toast({
       title: "Logged out successfully",
       description: "See you next time!",
@@ -104,14 +107,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">Dr. Johnson</p>
+                        <p className="text-sm font-medium leading-none">
+                          {user ? `${user.lastName ? `Dr. ${user.lastName}` : user.username}` : 'Loading...'}
+                        </p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          doctor@dentalcare.com
+                          {user?.email || 'Loading...'}
                         </p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer">
+                    <DropdownMenuItem 
+                      className="cursor-pointer"
+                      onClick={() => navigate('/profile')}
+                    >
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
                     </DropdownMenuItem>

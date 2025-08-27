@@ -10,6 +10,7 @@ import {
   Plus
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,7 @@ import { useAppointments } from "@/hooks/useAppointments";
 const Dashboard = () => {
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
+  const navigate = useNavigate();
 
   // UI state for dialogs
   const [openNewAppointment, setOpenNewAppointment] = useState(false);
@@ -381,6 +383,7 @@ const Dashboard = () => {
               <Button 
                 variant="outline" 
                 className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/calendar')}
               >
                 <Calendar className="w-5 h-5 text-dental-blue" />
                 <span className="text-sm">View Calendar</span>
@@ -388,6 +391,7 @@ const Dashboard = () => {
               <Button 
                 variant="outline" 
                 className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/slots')}
               >
                 <Clock className="w-5 h-5 text-dental-blue" />
                 <span className="text-sm">Manage Slots</span>
