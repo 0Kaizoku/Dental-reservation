@@ -1,2 +1,0 @@
-- name: Build project
-  run: dotnet build C:\Users\amine\OneDrive\Desktop\CabinetDentaire\CabinetDentaire.sln
