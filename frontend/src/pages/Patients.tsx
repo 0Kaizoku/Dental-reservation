@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +38,14 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { apiService, Patient } from "@/lib/api";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 const Patients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Modal and form state
   const [openNewPatient, setOpenNewPatient] = useState(false);
@@ -53,74 +56,120 @@ const Patients = () => {
   const [cin, setCin] = useState("");
   const [matricule, setMatricule] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Edit modal state
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editFirstName, setEditFirstName] = useState("");
+  const [editLastName, setEditLastName] = useState("");
+  const [editDob, setEditDob] = useState("");
+  const [editGender, setEditGender] = useState("");
+  const [editCin, setEditCin] = useState("");
+  const [editMatricule, setEditMatricule] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Patient saved (preview)",
-      description: `${firstName} ${lastName} has been captured. Backend save to be wired.`,
-    });
-    setOpenNewPatient(false);
-    setFirstName("");
-    setLastName("");
-    setDob("");
-    setGender("");
-    setCin("");
-    setMatricule("");
+    try {
+      const created = await apiService.createPatient({
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        dateOfBirth: dob || undefined,
+        gender: gender || undefined,
+        cin: cin || undefined,
+        matricule: matricule || undefined,
+      });
+      toast({ title: "Patient saved", description: `${created.name} created successfully.` });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      setOpenNewPatient(false);
+      setFirstName("");
+      setLastName("");
+      setDob("");
+      setGender("");
+      setCin("");
+      setMatricule("");
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message || "Could not create patient", variant: "destructive" });
+    }
   };
 
-  // Mock patients data
-  const patients = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      age: 29,
-      gender: "Female",
-      phone: "+1 234 567 8900",
-      email: "sarah.johnson@example.com",
-      lastVisit: "2024-01-10",
-      status: "active"
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: number, payload: { firstName?: string; lastName?: string; dateOfBirth?: string; gender?: string; cin?: string; matricule?: string; } }) =>
+      apiService.updatePatient(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast({ title: "Patient updated" });
     },
-    {
-      id: 2,
-      name: "Mike Wilson",
-      age: 41,
-      gender: "Male",
-      phone: "+1 234 567 8901",
-      email: "mike.wilson@example.com",
-      lastVisit: "2023-12-22",
-      status: "inactive"
+    onError: (err: any) => toast({ title: "Update failed", description: err.message, variant: "destructive" })
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiService.deletePatient(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast({ title: "Patient deleted" });
     },
-    {
-      id: 3,
-      name: "Emma Davis",
-      age: 34,
-      gender: "Female",
-      phone: "+1 234 567 8902",
-      email: "emma.davis@example.com",
-      lastVisit: "2024-01-05",
-      status: "active"
-    },
-    {
-      id: 4,
-      name: "John Smith",
-      age: 52,
-      gender: "Male",
-      phone: "+1 234 567 8903",
-      email: "john.smith@example.com",
-      lastVisit: "2023-11-14",
-      status: "new"
-    },
-    {
-      id: 5,
-      name: "Lisa Anderson",
-      age: 38,
-      gender: "Female",
-      phone: "+1 234 567 8904",
-      email: "lisa.anderson@example.com",
-      lastVisit: "2023-12-30",
-      status: "active"
-    }
-  ];
+    onError: (err: any) => toast({ title: "Delete failed", description: err.message, variant: "destructive" })
+  });
+
+  const startEdit = (p: { id: number; name: string; gender?: string; }): void => {
+    setEditingId(p.id);
+    const parts = (p.name || "").trim().split(" ");
+    const first = parts.shift() || "";
+    const last = parts.join(" ");
+    setEditFirstName(first);
+    setEditLastName(last);
+    setEditGender(p.gender === "Female" ? "2" : p.gender === "Male" ? "1" : "");
+    setEditDob("");
+    setEditCin("");
+    setEditMatricule("");
+    setOpenEdit(true);
+  };
+
+  const submitEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId == null) return;
+    updateMutation.mutate({
+      id: editingId,
+      payload: {
+        firstName: editFirstName || undefined,
+        lastName: editLastName || undefined,
+        dateOfBirth: editDob || undefined,
+        gender: editGender || undefined,
+        cin: editCin || undefined,
+        matricule: editMatricule || undefined,
+      }
+    });
+    setOpenEdit(false);
+    setEditingId(null);
+  };
+
+  // Backend data
+  const { data: serverPatients, isLoading } = useQuery({
+    queryKey: ["patients", { name: searchTerm, status: statusFilter }],
+    queryFn: () => apiService.getPatients(searchTerm || undefined, statusFilter === "all" ? undefined : statusFilter),
+  });
+
+  // Map server patients to UI with computed age
+  const patients = useMemo(() => {
+    const src = serverPatients || [] as Patient[];
+    const computeAge = (dob?: string) => {
+      if (!dob) return "";
+      const d = new Date(dob);
+      if (isNaN(d.getTime())) return "";
+      const diff = Date.now() - d.getTime();
+      const ageDt = new Date(diff);
+      return Math.abs(ageDt.getUTCFullYear() - 1970);
+    };
+    return src.map(p => ({
+      id: p.id,
+      name: p.name,
+      age: computeAge(p.dateOfBirth),
+      gender: p.gender,
+      phone: p.phone,
+      email: p.email,
+      lastVisit: p.lastVisit,
+      status: p.status,
+    }));
+  }, [serverPatients]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -264,7 +313,9 @@ const Patients = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPatients.map((patient) => (
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={8}>Loading...</TableCell></TableRow>
+                ) : filteredPatients.map((patient) => (
                   <TableRow key={patient.id} className="hover:bg-accent/20">
                     <TableCell className="font-medium">
                       {patient.name}
@@ -303,13 +354,14 @@ const Patients = () => {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-dental-blue hover:bg-dental-light-blue/20"
-                        >
+                        onClick={() => startEdit(patient)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => patient.id && deleteMutation.mutate(Number(patient.id))}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -332,6 +384,55 @@ const Patients = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Modal */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Patient</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={submitEdit}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="editFirstName">First name</Label>
+                <Input id="editFirstName" value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="editLastName">Last name</Label>
+                <Input id="editLastName" value={editLastName} onChange={(e) => setEditLastName(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="editDob">Date of birth</Label>
+                <Input id="editDob" type="date" value={editDob} onChange={(e) => setEditDob(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="editGender">Gender</Label>
+                <Select value={editGender} onValueChange={setEditGender}>
+                  <SelectTrigger id="editGender">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Male</SelectItem>
+                    <SelectItem value="2">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="editCin">CIN</Label>
+                <Input id="editCin" value={editCin} onChange={(e) => setEditCin(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="editMatricule">Matricule</Label>
+                <Input id="editMatricule" value={editMatricule} onChange={(e) => setEditMatricule(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={updateMutation.isPending}>Save Changes</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

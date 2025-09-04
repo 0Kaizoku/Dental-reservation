@@ -22,10 +22,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppointments } from "@/hooks/useAppointments";
+import { apiService, RdvPatient } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Calendar = () => {
   const { toast } = useToast();
   const { appointments, addAppointment } = useAppointments();
+  const queryClient = useQueryClient();
 
   // Navigation state (week offset from current week)
   const [weekOffset, setWeekOffset] = useState(0);
@@ -40,6 +43,15 @@ const Calendar = () => {
   const [duration, setDuration] = useState("");
   const [nature, setNature] = useState("");
   const [notes, setNotes] = useState("");
+  const [patientId, setPatientId] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Edit modal state
+  const [openEdit, setOpenEdit] = useState(false);
+  const [editing, setEditing] = useState<RdvPatient | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [editDuration, setEditDuration] = useState("");
 
   // Helpers for week dates
   const getStartOfWeek = (d: Date) => {
@@ -89,47 +101,119 @@ const Calendar = () => {
     return times;
   }, []);
 
-  const handleSubmitNew = (e: React.FormEvent) => {
+  const toUiItem = (r: RdvPatient) => ({
+    id: r.numRdv ?? Date.now(),
+    date: r.dateRdv ? String(r.dateRdv).slice(0, 10) : "",
+    time: r.heure || "",
+    patient: r.nomPer || "",
+    type: r.natureSoin || "Consultation",
+    duration: r.duree || "30 min",
+    numRdv: r.numRdv,
+  });
+
+  // Load all appointments and filter by week
+  const { data: rdvs } = useQuery({
+    queryKey: ["appointments", { scope: "calendar" }],
+    queryFn: () => apiService.getAppointments(),
+  });
+
+  const serverAppointments = useMemo(() => (rdvs || []).map(toUiItem), [rdvs]);
+
+  const handleSubmitNew = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !time || !patientName) {
       toast({ title: "Missing info", description: "Please fill at least patient, date and time." });
       return;
     }
 
-    addAppointment({
-      date,
-      time,
-      patient: patientName,
-      type: nature || "Consultation",
-      duration: duration || "30 min",
-    });
+    try {
+      setIsSaving(true);
+      await apiService.createAppointment({
+        idPersonne: patientId ? Number(patientId) : undefined,
+        numCabinet: cabinet || null,
+        dateRdv: date,
+        heure: time,
+        duree: duration || "30 min",
+        observation: notes || null,
+        nomPs: doctor || null,
+        natureSoin: nature || null,
+        nomPer: patientName || null,
+      });
+      addAppointment({
+        date,
+        time,
+        patient: patientName,
+        type: nature || "Consultation",
+        duration: duration || "30 min",
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
 
-    // Navigate to the week of the chosen date so it becomes visible immediately
-    const baseWeekStart = getStartOfWeek(new Date());
-    const selectedWeekStart = getStartOfWeek(new Date(date));
-    const diffMs = selectedWeekStart.getTime() - baseWeekStart.getTime();
-    const diffDays = Math.round(diffMs / 86400000);
-    setWeekOffset(Math.round(diffDays / 7));
+      // Navigate to the week of the chosen date so it becomes visible immediately
+      const baseWeekStart = getStartOfWeek(new Date());
+      const selectedWeekStart = getStartOfWeek(new Date(date));
+      const diffMs = selectedWeekStart.getTime() - baseWeekStart.getTime();
+      const diffDays = Math.round(diffMs / 86400000);
+      setWeekOffset(Math.round(diffDays / 7));
 
-    toast({ title: "Appointment added", description: `${patientName} on ${date} at ${time}` });
-    setOpenNew(false);
-    setPatientName("");
-    setDoctor("");
-    setCabinet("");
-    setDate("");
-    setTime("");
-    setDuration("");
-    setNature("");
-    setNotes("");
+      toast({ title: "Appointment added", description: `${patientName} on ${date} at ${time}` });
+      setOpenNew(false);
+      setPatientName("");
+      setPatientId("");
+      setDoctor("");
+      setCabinet("");
+      setDate("");
+      setTime("");
+      setDuration("");
+      setNature("");
+      setNotes("");
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onClickAppointment = (a: { numRdv?: number; date: string; time: string; duration: string; }) => {
+    if (!a.numRdv) {
+      toast({ title: "Unsaved appointment", description: "Only saved appointments can be edited.", variant: "destructive" });
+      return;
+    }
+    const rdv = (rdvs || []).find(r => r.numRdv === a.numRdv);
+    if (!rdv) return;
+    setEditing(rdv);
+    setEditDate(rdv.dateRdv ? String(rdv.dateRdv).slice(0,10) : "");
+    setEditTime(rdv.heure || "");
+    setEditDuration(rdv.duree || "30 min");
+    setOpenEdit(true);
+  };
+
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing || editing.numRdv == null) return;
+    try {
+      await apiService.updateAppointment(Number(editing.numRdv), {
+        ...editing,
+        dateRdv: editDate,
+        heure: editTime,
+        duree: editDuration || "30 min",
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Appointment updated" });
+      setOpenEdit(false);
+      setEditing(null);
+    } catch (err: any) {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    }
   };
 
   // Today's schedule from state
   const todayYmd = toYmd(new Date());
   const todaysAppointments = useMemo(() => {
-    return appointments
+    const all = [...(serverAppointments || []), ...appointments];
+    return all
       .filter(a => a.date === todayYmd)
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [appointments, todayYmd]);
+  }, [serverAppointments, appointments, todayYmd]);
 
   return (
     <div className="p-6 space-y-6">
@@ -167,6 +251,18 @@ const Calendar = () => {
                   <Input id="patientName" placeholder="e.g. Sarah Johnson" value={patientName} onChange={(e) => setPatientName(e.target.value)} />
                 </div>
                 <div>
+                  <Label htmlFor="patientId">Patient ID</Label>
+                  <Input id="patientId" placeholder="e.g. 123" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="doctor">Doctor</Label>
+                  <Input id="doctor" placeholder="e.g. Dr. Ahmed" value={doctor} onChange={(e) => setDoctor(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="cabinet">Cabinet</Label>
+                  <Input id="cabinet" placeholder="e.g. C01" value={cabinet} onChange={(e) => setCabinet(e.target.value)} />
+                </div>
+                <div>
                   <Label htmlFor="date">Date</Label>
                   <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
                 </div>
@@ -189,7 +285,7 @@ const Calendar = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="nature">Type</Label>
+                  <Label htmlFor="nature">Nature of care</Label>
                   <Input id="nature" placeholder="e.g. Cleaning, Checkup" value={nature} onChange={(e) => setNature(e.target.value)} />
                 </div>
                 <div className="sm:col-span-2">
@@ -199,7 +295,7 @@ const Calendar = () => {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={() => setOpenNew(false)}>Cancel</Button>
-                <Button type="submit">Save Appointment</Button>
+                <Button type="submit" disabled={isSaving}>Save Appointment</Button>
               </div>
             </form>
           </DialogContent>
@@ -238,14 +334,15 @@ const Calendar = () => {
                       </div>
                       {weekDates.map((d, dayIndex) => {
                         const ymd = toYmd(d);
-                        const items = appointments.filter(a => a.date === ymd && a.time === slot);
+                        const allItems = [...(serverAppointments || []), ...appointments];
+                        const items = allItems.filter(a => a.date === ymd && a.time === slot);
                         return (
                           <div
                             key={`${slot}-${dayIndex}`}
                             className="p-2 min-h-[60px] border border-border/20 rounded-md hover:bg-accent/20 cursor-pointer transition-colors"
                           >
                             {items.map((a) => (
-                              <div key={a.id} className="bg-dental-blue/10 border border-dental-blue/20 rounded p-1 text-xs mb-1">
+                              <div key={a.id} className="bg-dental-blue/10 border border-dental-blue/20 rounded p-1 text-xs mb-1" onClick={() => onClickAppointment(a)}>
                                 <div className="font-medium text-dental-blue">{a.patient}</div>
                                 <div className="text-muted-foreground">{a.type}</div>
                               </div>
@@ -323,6 +420,59 @@ const Calendar = () => {
           </Card>
         </div>
       </div>
+
+      {/* Edit Appointment Modal */}
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Edit Appointment</DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <form className="space-y-4" onSubmit={submitEdit}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Patient</Label>
+                  <Input value={editing.nomPer || ""} readOnly />
+                </div>
+                <div>
+                  <Label>Doctor</Label>
+                  <Input value={editing.nomPs || ""} readOnly />
+                </div>
+                <div>
+                  <Label>Cabinet</Label>
+                  <Input value={editing.numCabinet || ""} readOnly />
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Time</Label>
+                  <Input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+                </div>
+                <div>
+                  <Label>Duration</Label>
+                  <Select value={editDuration} onValueChange={setEditDuration}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15 min">15 minutes</SelectItem>
+                      <SelectItem value="30 min">30 minutes</SelectItem>
+                      <SelectItem value="45 min">45 minutes</SelectItem>
+                      <SelectItem value="60 min">60 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
+                <Button type="submit">Save Changes</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

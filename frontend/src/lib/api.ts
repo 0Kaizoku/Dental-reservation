@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://localhost:7091/api';
+const API_BASE_URL = 'http://localhost:5057/api';
 
 export interface Patient {
   id: number;
@@ -103,6 +103,49 @@ class ApiService {
     return this.handleResponse<Patient>(response);
   }
 
+  async createPatient(payload: {
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string; // yyyy-MM-dd
+    gender?: string; // "1" or "2"
+    cin?: string;
+    matricule?: string;
+  }): Promise<Patient> {
+    const response = await fetch(`${API_BASE_URL}/Patients`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<Patient>(response);
+  }
+
+  async updatePatient(id: number, payload: {
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    cin?: string;
+    matricule?: string;
+  }): Promise<Patient> {
+    const response = await fetch(`${API_BASE_URL}/Patients/${id}`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<Patient>(response);
+  }
+
+  async deletePatient(id: number): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/Patients/${id}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+    });
+    if (!response.ok && response.status !== 204) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+  }
+
   async getPatientStats(): Promise<PatientStats> {
     const response = await fetch(`${API_BASE_URL}/Patients/stats`, {
       headers: this.getAuthHeaders(),
@@ -122,6 +165,35 @@ class ApiService {
       headers: this.getAuthHeaders(),
     });
     return this.handleResponse<RdvPatient[]>(response);
+  }
+
+  // Profile
+  async getProfile(): Promise<{ username: string; lastName?: string; userType?: string; }>{
+    const response = await fetch(`${API_BASE_URL}/Profile/me`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse(response);
+  }
+
+  async updateProfile(data: { lastName?: string }): Promise<{ username: string; lastName?: string; userType?: string; }>{
+    const response = await fetch(`${API_BASE_URL}/Profile/me`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse(response);
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/Profile/password`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    if (!response.ok && response.status !== 204) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
   }
 
   async createAppointment(rdv: RdvPatient): Promise<RdvPatient> {

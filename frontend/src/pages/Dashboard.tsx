@@ -9,7 +9,7 @@ import {
   TrendingUp,
   Plus
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -24,11 +24,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppointments } from "@/hooks/useAppointments";
+import { apiService } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // UI state for dialogs
   const [openNewAppointment, setOpenNewAppointment] = useState(false);
@@ -53,20 +56,38 @@ const Dashboard = () => {
   const [appointmentNature, setAppointmentNature] = useState("");
   const [appointmentNotes, setAppointmentNotes] = useState("");
 
-  // Mock data - replace with real API calls
+  // Real data via API
+  const today = useMemo(() => new Date().toISOString().slice(0,10), []);
+
+  const { data: patientStats } = useQuery({
+    queryKey: ["patient-stats"],
+    queryFn: () => apiService.getPatientStats(),
+  });
+
+  const { data: allAppointments } = useQuery({
+    queryKey: ["appointments", { scope: "all" }],
+    queryFn: () => apiService.getAppointments(),
+  });
+
+  const { data: todayAppointments } = useQuery({
+    queryKey: ["appointments", { date: today }],
+    queryFn: () => apiService.getAppointments({ date: today }),
+  });
+
   const stats = {
-    totalAppointments: 248,
-    todayAppointments: 12,
-    totalPatients: 156,
-    availableSlots: 24
+    totalAppointments: allAppointments?.length || 0,
+    todayAppointments: todayAppointments?.length || 0,
+    totalPatients: patientStats?.total || 0,
+    availableSlots: 0,
   };
 
-  const recentAppointments = [
-    { id: 1, patient: "Sarah Johnson", time: "09:00", type: "Cleaning", status: "confirmed" },
-    { id: 2, patient: "Mike Wilson", time: "10:30", type: "Checkup", status: "pending" },
-    { id: 3, patient: "Emma Davis", time: "14:00", type: "Root Canal", status: "confirmed" },
-    { id: 4, patient: "John Smith", time: "15:30", type: "Filling", status: "completed" },
-  ];
+  const recentAppointments = (todayAppointments || []).slice(0, 6).map((r, idx) => ({
+    id: r.numRdv ?? idx,
+    patient: r.nomPer || "",
+    time: r.heure || "",
+    type: r.natureSoin || "Consultation",
+    status: "confirmed",
+  }));
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -78,48 +99,72 @@ const Dashboard = () => {
     return variants[status as keyof typeof variants] || variants.pending;
   };
 
-  const handleSubmitNewPatient = (e: React.FormEvent) => {
+  const handleSubmitNewPatient = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Patient saved (preview)",
-      description: `${patientFirstName} ${patientLastName} has been captured. Backend save to be wired.`,
-    });
-    setOpenNewPatient(false);
-    setPatientFirstName("");
-    setPatientLastName("");
-    setPatientDob("");
-    setPatientGender("");
-    setPatientCin("");
-    setPatientMatricule("");
+    try {
+      await apiService.createPatient({
+        firstName: patientFirstName || undefined,
+        lastName: patientLastName || undefined,
+        dateOfBirth: patientDob || undefined,
+        gender: patientGender || undefined,
+        cin: patientCin || undefined,
+        matricule: patientMatricule || undefined,
+      });
+      toast({ title: "Patient saved" });
+      queryClient.invalidateQueries({ queryKey: ["patient-stats"] });
+      setOpenNewPatient(false);
+      setPatientFirstName("");
+      setPatientLastName("");
+      setPatientDob("");
+      setPatientGender("");
+      setPatientCin("");
+      setPatientMatricule("");
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    }
   };
 
-  const handleSubmitNewAppointment = (e: React.FormEvent) => {
+  const handleSubmitNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!appointmentDate || !appointmentTime || !appointmentPatientName) {
       toast({ title: "Missing info", description: "Please fill at least patient, date and time." });
       return;
     }
-    addAppointment({
-      date: appointmentDate,
-      time: appointmentTime,
-      patient: appointmentPatientName,
-      type: appointmentNature || "Consultation",
-      duration: appointmentDuration || "30 min",
-    });
-    toast({
-      title: "Appointment saved",
-      description: `${appointmentPatientName} on ${appointmentDate} at ${appointmentTime}.`,
-    });
-    setOpenNewAppointment(false);
-    setAppointmentPatientId("");
-    setAppointmentPatientName("");
-    setAppointmentDoctor("");
-    setAppointmentCabinet("");
-    setAppointmentDate("");
-    setAppointmentTime("");
-    setAppointmentDuration("");
-    setAppointmentNature("");
-    setAppointmentNotes("");
+    try {
+      await apiService.createAppointment({
+        idPersonne: appointmentPatientId ? Number(appointmentPatientId) : undefined,
+        numCabinet: appointmentCabinet || null,
+        dateRdv: appointmentDate,
+        heure: appointmentTime,
+        duree: appointmentDuration || "30 min",
+        observation: appointmentNotes || null,
+        nomPs: appointmentDoctor || null,
+        natureSoin: appointmentNature || null,
+        nomPer: appointmentPatientName || null,
+      });
+      addAppointment({
+        date: appointmentDate,
+        time: appointmentTime,
+        patient: appointmentPatientName,
+        type: appointmentNature || "Consultation",
+        duration: appointmentDuration || "30 min",
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments", { date: today }] });
+      toast({ title: "Appointment saved", description: `${appointmentPatientName} on ${appointmentDate} at ${appointmentTime}.` });
+      setOpenNewAppointment(false);
+      setAppointmentPatientId("");
+      setAppointmentPatientName("");
+      setAppointmentDoctor("");
+      setAppointmentCabinet("");
+      setAppointmentDate("");
+      setAppointmentTime("");
+      setAppointmentDuration("");
+      setAppointmentNature("");
+      setAppointmentNotes("");
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    }
   };
 
   return (

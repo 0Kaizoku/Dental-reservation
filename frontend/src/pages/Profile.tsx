@@ -2,20 +2,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { apiService } from "@/lib/api";
 
 const Profile = () => {
   const { toast } = useToast();
-  const [name, setName] = useState("Dr. Johnson");
-  const [email, setEmail] = useState("doctor@dentalcare.com");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const me = await apiService.getProfile();
+        setName(me.lastName || "");
+        setEmail(me.username || "");
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: "Profile saved", description: "Your profile changes have been saved." });
-    setPassword("");
+    try {
+      if (name) await apiService.updateProfile({ lastName: name });
+      if (password) {
+        await apiService.changePassword(currentPassword, password);
+        setCurrentPassword("");
+        setPassword("");
+      }
+      toast({ title: "Profile saved", description: "Your profile changes have been saved." });
+    } catch (err: any) {
+      toast({ title: "Update failed", description: err.message || "Could not update profile", variant: "destructive" });
+    }
   };
 
   return (
@@ -43,6 +66,10 @@ const Profile = () => {
               <div>
                 <Label htmlFor="phone">Phone</Label>
                 <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="currentPassword">Current password</Label>
+                <Input id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
               </div>
               <div>
                 <Label htmlFor="password">New password</Label>

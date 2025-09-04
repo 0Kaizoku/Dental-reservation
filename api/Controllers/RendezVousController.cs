@@ -36,17 +36,27 @@ namespace Dental_reservation.api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateAppointment([FromBody] RdvPatient newRdv)
         {
-            // Check for doctor conflict
-            bool doctorConflict = await _context.RdvPatients.AnyAsync(r =>
-                r.NomPs == newRdv.NomPs &&
-                r.DateRdv == newRdv.DateRdv &&
-                r.Heure == newRdv.Heure);
+            if (newRdv.DateRdv == null || string.IsNullOrWhiteSpace(newRdv.Heure))
+                return BadRequest("Date and time are required.");
 
-            // Check for cabinet conflict
-            bool cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
-                r.NumCabinet == newRdv.NumCabinet &&
-                r.DateRdv == newRdv.DateRdv &&
-                r.Heure == newRdv.Heure);
+            bool doctorConflict = false;
+            bool cabinetConflict = false;
+
+            if (!string.IsNullOrWhiteSpace(newRdv.NomPs))
+            {
+                doctorConflict = await _context.RdvPatients.AnyAsync(r =>
+                    r.NomPs == newRdv.NomPs &&
+                    r.DateRdv == newRdv.DateRdv &&
+                    r.Heure == newRdv.Heure);
+            }
+
+            if (!string.IsNullOrWhiteSpace(newRdv.NumCabinet))
+            {
+                cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
+                    r.NumCabinet == newRdv.NumCabinet &&
+                    r.DateRdv == newRdv.DateRdv &&
+                    r.Heure == newRdv.Heure);
+            }
 
             if (doctorConflict)
                 return Conflict("Doctor already has an appointment at this time.");
@@ -67,19 +77,30 @@ namespace Dental_reservation.api.Controllers
             if (rdv == null)
                 return NotFound("Appointment not found");
 
-            // Check for doctor conflict (excluding this appointment)
-            bool doctorConflict = await _context.RdvPatients.AnyAsync(r =>
-                r.NumRdv != num_rdv &&
-                r.NomPs == updatedRdv.NomPs &&
-                r.DateRdv == updatedRdv.DateRdv &&
-                r.Heure == updatedRdv.Heure);
+            if (updatedRdv.DateRdv == null || string.IsNullOrWhiteSpace(updatedRdv.Heure))
+                return BadRequest("Date and time are required.");
 
-            // Check for cabinet conflict (excluding this appointment)
-            bool cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
-                r.NumRdv != num_rdv &&
-                r.NumCabinet == updatedRdv.NumCabinet &&
-                r.DateRdv == updatedRdv.DateRdv &&
-                r.Heure == updatedRdv.Heure);
+            // Check for conflicts only when respective fields provided (excluding this appointment)
+            bool doctorConflict = false;
+            bool cabinetConflict = false;
+
+            if (!string.IsNullOrWhiteSpace(updatedRdv.NomPs))
+            {
+                doctorConflict = await _context.RdvPatients.AnyAsync(r =>
+                    r.NumRdv != num_rdv &&
+                    r.NomPs == updatedRdv.NomPs &&
+                    r.DateRdv == updatedRdv.DateRdv &&
+                    r.Heure == updatedRdv.Heure);
+            }
+
+            if (!string.IsNullOrWhiteSpace(updatedRdv.NumCabinet))
+            {
+                cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
+                    r.NumRdv != num_rdv &&
+                    r.NumCabinet == updatedRdv.NumCabinet &&
+                    r.DateRdv == updatedRdv.DateRdv &&
+                    r.Heure == updatedRdv.Heure);
+            }
 
             if (doctorConflict)
                 return Conflict("Doctor already has an appointment at this time.");

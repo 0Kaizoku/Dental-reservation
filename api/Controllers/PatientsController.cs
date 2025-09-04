@@ -154,5 +154,129 @@ namespace Dental_reservation.api.Controllers
                 return StatusCode(500, new { message = "Error retrieving stats", error = ex.Message });
             }
         }
+
+        public class CreatePatientDto
+        {
+            public string? FirstName { get; set; }
+            public string? LastName { get; set; }
+            public string? DateOfBirth { get; set; } // yyyy-MM-dd
+            public string? Gender { get; set; } // "1" male, "2" female
+            public string? Cin { get; set; }
+            public string? Matricule { get; set; } // maps to NumSecuOdPer
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] CreatePatientDto dto)
+        {
+            try
+            {
+                var entity = new PopPersonne
+                {
+                    PrenomPer = dto.FirstName,
+                    NomPer = dto.LastName,
+                    DateNaissancePer = string.IsNullOrWhiteSpace(dto.DateOfBirth) ? null : DateTime.Parse(dto.DateOfBirth),
+                    CodeSexePer = dto.Gender,
+                    CIN = dto.Cin,
+                    NumSecuOdPer = dto.Matricule
+                };
+
+                _context.PopPersonnes.Add(entity);
+                await _context.SaveChangesAsync();
+
+                var result = new PatientDto
+                {
+                    Id = (int)entity.IdNumPersonne,
+                    Name = $"{entity.PrenomPer ?? ""} {entity.NomPer ?? ""}".Trim(),
+                    Email = "",
+                    Phone = "",
+                    DateOfBirth = entity.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
+                    Gender = entity.CodeSexePer == "1" ? "Male" : entity.CodeSexePer == "2" ? "Female" : "Unknown",
+                    LastVisit = "",
+                    NextAppointment = "",
+                    Status = "active",
+                    MedicalHistory = new string[] { },
+                    Insurance = "",
+                    EmergencyContact = new EmergencyContactDto { Name = "", Phone = "", Relationship = "" }
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating patient", error = ex.Message });
+            }
+        }
+
+        public class UpdatePatientDto
+        {
+            public string? FirstName { get; set; }
+            public string? LastName { get; set; }
+            public string? DateOfBirth { get; set; }
+            public string? Gender { get; set; }
+            public string? Cin { get; set; }
+            public string? Matricule { get; set; }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdatePatientDto dto)
+        {
+            try
+            {
+                var entity = await _context.PopPersonnes.FirstOrDefaultAsync(p => p.IdNumPersonne == id);
+                if (entity == null) return NotFound(new { message = "Patient not found" });
+
+                entity.PrenomPer = dto.FirstName ?? entity.PrenomPer;
+                entity.NomPer = dto.LastName ?? entity.NomPer;
+                if (!string.IsNullOrWhiteSpace(dto.DateOfBirth))
+                {
+                    entity.DateNaissancePer = DateTime.Parse(dto.DateOfBirth);
+                }
+                entity.CodeSexePer = string.IsNullOrWhiteSpace(dto.Gender) ? entity.CodeSexePer : dto.Gender;
+                entity.CIN = dto.Cin ?? entity.CIN;
+                entity.NumSecuOdPer = dto.Matricule ?? entity.NumSecuOdPer;
+
+                await _context.SaveChangesAsync();
+
+                var result = new PatientDto
+                {
+                    Id = (int)entity.IdNumPersonne,
+                    Name = $"{entity.PrenomPer ?? ""} {entity.NomPer ?? ""}".Trim(),
+                    Email = "",
+                    Phone = "",
+                    DateOfBirth = entity.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
+                    Gender = entity.CodeSexePer == "1" ? "Male" : entity.CodeSexePer == "2" ? "Female" : "Unknown",
+                    LastVisit = "",
+                    NextAppointment = "",
+                    Status = "active",
+                    MedicalHistory = new string[] { },
+                    Insurance = "",
+                    EmergencyContact = new EmergencyContactDto { Name = "", Phone = "", Relationship = "" }
+                };
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating patient", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                var entity = await _context.PopPersonnes.FirstOrDefaultAsync(p => p.IdNumPersonne == id);
+                if (entity == null) return NotFound(new { message = "Patient not found" });
+
+                _context.PopPersonnes.Remove(entity);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error deleting patient", error = ex.Message });
+            }
+        }
     }
 } 

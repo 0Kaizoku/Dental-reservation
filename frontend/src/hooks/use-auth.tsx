@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
+import { apiService } from '@/lib/api';
 
 interface User {
   username: string;
@@ -53,27 +54,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      
-      // TODO: Replace with actual API call to your backend
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ username, password })
-      // });
-      
-      // For now, simulate a successful login with mock data
-      // Remove this when you connect to the real backend
-      const mockUser: User = {
+      // Real backend login: stores JWT in localStorage via apiService.login
+      const { token } = await apiService.login(username, password);
+
+      // Minimal user object for UI; if username looks like an email, keep it as-is
+      const isEmail = /@/.test(username);
+      const loggedInUser: User = {
         username,
-        lastName: 'Johnson', // This will come from your database
-        userType: 'doctor',
-        email: `${username}@dentalcare.com` // This will come from your database
+        email: isEmail ? username : `${username}@dentalcare.com`
       };
 
-      setUser(mockUser);
-      localStorage.setItem('dental_user', JSON.stringify(mockUser));
-      
-      return true;
+      setUser(loggedInUser);
+      localStorage.setItem('dental_user', JSON.stringify(loggedInUser));
+
+      return !!token;
     } catch (error) {
       console.error('Login error:', error);
       return false;
@@ -85,6 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('dental_user');
+    apiService.logout();
   };
 
   const updateUser = (userData: Partial<User>) => {
@@ -97,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
+    isAuthenticated: apiService.isAuthenticated(),
     isLoading,
     login,
     logout,

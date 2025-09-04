@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Stethoscope } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -13,24 +14,17 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (email && password) {
-        toast({
-          title: "Login successful",
-          description: "Welcome to Dental Reservation System",
-        });
-        navigate("/dashboard");
-      } else {
-        throw new Error("Invalid credentials");
-      }
+      const ok = await login(email, password);
+      if (!ok) throw new Error("Invalid credentials");
+      toast({ title: "Login successful", description: "Welcome to Dental Reservation System" });
+      navigate("/dashboard");
     } catch (error) {
       toast({
         title: "Login failed",
