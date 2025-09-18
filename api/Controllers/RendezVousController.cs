@@ -36,42 +36,75 @@ namespace Dental_reservation.api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateAppointment([FromBody] RdvPatient newRdv)
         {
-            if (newRdv.DateRdv == null || string.IsNullOrWhiteSpace(newRdv.Heure))
-                return BadRequest("Date and time are required.");
-
-            bool doctorConflict = false;
-            bool cabinetConflict = false;
-
-            if (!string.IsNullOrWhiteSpace(newRdv.NomPs))
+            try
             {
-                doctorConflict = await _context.RdvPatients.AnyAsync(r =>
-                    r.NomPs == newRdv.NomPs &&
-                    r.DateRdv == newRdv.DateRdv &&
-                    r.Heure == newRdv.Heure);
-            }
+                Console.WriteLine($"=== Creating Appointment ===");
+                Console.WriteLine($"Received data: Date={newRdv.DateRdv}, Time={newRdv.Heure}, Doctor={newRdv.NomPs}");
+                
+                if (newRdv.DateRdv == null || string.IsNullOrWhiteSpace(newRdv.Heure))
+                    return BadRequest("Date and time are required.");
 
-            if (!string.IsNullOrWhiteSpace(newRdv.NumCabinet))
+                // Test database connection first
+                var canConnect = await _context.Database.CanConnectAsync();
+                Console.WriteLine($"Database connection status: {canConnect}");
+                
+                if (!canConnect)
+                {
+                    return StatusCode(500, "Cannot connect to database");
+                }
+
+                bool doctorConflict = false;
+                bool cabinetConflict = false;
+
+                if (!string.IsNullOrWhiteSpace(newRdv.NomPs))
+                {
+                    doctorConflict = await _context.RdvPatients.AnyAsync(r =>
+                        r.NomPs == newRdv.NomPs &&
+                        r.DateRdv == newRdv.DateRdv &&
+                        r.Heure == newRdv.Heure);
+                }
+
+                if (!string.IsNullOrWhiteSpace(newRdv.NumCabinet))
+                {
+                    cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
+                        r.NumCabinet == newRdv.NumCabinet &&
+                        r.DateRdv == newRdv.DateRdv &&
+                        r.Heure == newRdv.Heure);
+                }
+
+                if (doctorConflict)
+                    return Conflict("Doctor already has an appointment at this time.");
+
+                if (cabinetConflict)
+                    return Conflict("Cabinet is already booked at this time.");
+
+                Console.WriteLine($"Adding appointment to context...");
+                _context.RdvPatients.Add(newRdv);
+                
+                Console.WriteLine($"Saving changes to database...");
+                var result = await _context.SaveChangesAsync();
+
+                // Log the result for debugging
+                Console.WriteLine($"SaveChanges result: {result} rows affected");
+                Console.WriteLine($"New appointment ID: {newRdv.NumRdv}");
+                
+                // Verify the appointment was actually saved
+                var savedAppointment = await _context.RdvPatients.FirstOrDefaultAsync(r => r.NumRdv == newRdv.NumRdv);
+                Console.WriteLine($"Verification - Found saved appointment: {savedAppointment != null}");
+
+                return Ok(newRdv);  
+            }
+            catch (Exception ex)
             {
-                cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
-                    r.NumCabinet == newRdv.NumCabinet &&
-                    r.DateRdv == newRdv.DateRdv &&
-                    r.Heure == newRdv.Heure);
+                // Log the exception for debugging
+                Console.WriteLine($"Error creating appointment: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-
-            if (doctorConflict)
-                return Conflict("Doctor already has an appointment at this time.");
-
-            if (cabinetConflict)
-                return Conflict("Cabinet is already booked at this time.");
-
-            _context.RdvPatients.Add(newRdv);
-            await _context.SaveChangesAsync();
-
-            return Ok(newRdv);
         }
 
         [HttpPut("{num_rdv}")]
-        public async Task<IActionResult> UpdateAppointment(double num_rdv, [FromBody] RdvPatient updatedRdv)
+        public async Task<IActionResult> UpdateAppointment(int num_rdv, [FromBody] RdvPatient updatedRdv)
         {
             var rdv = await _context.RdvPatients.FirstOrDefaultAsync(r => r.NumRdv == num_rdv);
             if (rdv == null)
@@ -128,7 +161,7 @@ namespace Dental_reservation.api.Controllers
         }
 
         [HttpDelete("{num_rdv}")]
-        public async Task<IActionResult> DeleteAppointment(double num_rdv)
+        public async Task<IActionResult> DeleteAppointment(int num_rdv)
         {
             var rdv = await _context.RdvPatients.FirstOrDefaultAsync(r => r.NumRdv == num_rdv);
             if (rdv == null)
@@ -189,6 +222,92 @@ namespace Dental_reservation.api.Controllers
             var availableSlots = slots.Except(bookedSlots).ToList();
 
             return Ok(availableSlots);
+        }
+
+        [HttpGet("debug/all-appointments")]
+        public async Task<IActionResult> GetAllAppointmentsDebug()
+        {
+            try
+            {
+                var allAppointments = await _context.RdvPatients.ToListAsync();
+                Console.WriteLine($"Total appointments in database: {allAppointments.Count}");
+                
+                foreach (var appointment in allAppointments)
+                {
+                    Console.WriteLine($"Appointment ID: {appointment.NumRdv}, Date: {appointment.DateRdv}, Time: {appointment.Heure}, Doctor: {appointment.NomPs}");
+                }
+                
+                return Ok(new { 
+                    count = allAppointments.Count, 
+                    appointments = allAppointments 
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving appointments: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpGet("debug/database-info")]
+        public async Task<IActionResult> GetDatabaseInfo()
+        {
+            try
+            {
+                var canConnect = await _context.Database.CanConnectAsync();
+                var connectionString = _context.Database.GetConnectionString();
+                var databaseName = _context.Database.GetDbConnection().Database;
+                
+                // Get table info
+                var tableExists = await _context.Database.ExecuteSqlRawAsync("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'tab_RDV_patient'") >= 0;
+                
+                return Ok(new {
+                    canConnect,
+                    databaseName,
+                    connectionString = connectionString?.Substring(0, Math.Min(50, connectionString.Length)) + "...", // Truncate for security
+                    tableExists,
+                    tableName = "tab_RDV_patient"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        [HttpPost("debug/create-test-appointment")]
+        public async Task<IActionResult> CreateTestAppointment()
+        {
+            try
+            {
+                var testAppointment = new RdvPatient
+                {
+                    DateRdv = DateTime.Today.AddDays(1),
+                    Heure = "10:00",
+                    NomPs = "Dr. Test",
+                    NumCabinet = "1",
+                    NomPer = "Test Patient",
+                    NatureSoin = "Test Appointment",
+                    Duree = "30 min",
+                    Observation = "This is a test appointment"
+                };
+
+                _context.RdvPatients.Add(testAppointment);
+                var result = await _context.SaveChangesAsync();
+
+                Console.WriteLine($"Test appointment created with ID: {testAppointment.NumRdv}");
+
+                return Ok(new { 
+                    message = "Test appointment created successfully",
+                    appointmentId = testAppointment.NumRdv,
+                    rowsAffected = result
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating test appointment: {ex.Message}");
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
     }
 } 

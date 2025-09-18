@@ -9,7 +9,8 @@ namespace Dental_reservation.api.Models
     {
         [Key]
         [Column("Id Num Personne")]
-        public double IdNumPersonne { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int IdNumPersonne { get; set; }
 
         [Column("Nom Per")]
         public string? NomPer { get; set; }

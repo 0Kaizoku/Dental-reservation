@@ -39,7 +39,7 @@ namespace Dental_reservation.api.Controllers
                 // Map to DTOs
                 var patientDtos = patients.Select(p => new PatientDto
                 {
-                    Id = (int)p.IdNumPersonne,
+                    Id = p.IdNumPersonne,
                     Name = $"{p.PrenomPer ?? ""} {p.NomPer ?? ""}".Trim(),
                     // Email = $"patient.{p.IdNumPersonne}@example.com", // TODO: Add email field to database
                     Email = "", // Placeholder for future development
@@ -96,7 +96,7 @@ namespace Dental_reservation.api.Controllers
 
                 var patientDto = new PatientDto
                 {
-                    Id = (int)patient.IdNumPersonne,
+                    Id = patient.IdNumPersonne,
                     Name = $"{patient.PrenomPer ?? ""} {patient.NomPer ?? ""}".Trim(),
                     // Email = $"patient.{patient.IdNumPersonne}@example.com", // TODO: Add email field to database
                     Email = "", // Placeholder for future development
@@ -163,6 +163,14 @@ namespace Dental_reservation.api.Controllers
             public string? Gender { get; set; } // "1" male, "2" female
             public string? Cin { get; set; }
             public string? Matricule { get; set; } // maps to NumSecuOdPer
+            public string? CodeCivilitePer { get; set; }
+            public int? IdNumFamillePer { get; set; } // Changed from double? to int?
+            public string? CodeQualitePersonnePer { get; set; }
+            public string? CodeStatutPer { get; set; }
+            public string? CodeSituationFamilialePer { get; set; }
+            public int? IdNumAdressePer { get; set; } // Changed from double? to int?
+            public string? CodeCollectivitePer { get; set; }
+            public string? Autorisation { get; set; }
         }
 
         [HttpPost]
@@ -177,7 +185,15 @@ namespace Dental_reservation.api.Controllers
                     DateNaissancePer = string.IsNullOrWhiteSpace(dto.DateOfBirth) ? null : DateTime.Parse(dto.DateOfBirth),
                     CodeSexePer = dto.Gender,
                     CIN = dto.Cin,
-                    NumSecuOdPer = dto.Matricule
+                    NumSecuOdPer = dto.Matricule,
+                    CodeCivilitePer = dto.CodeCivilitePer,
+                    IdNumFamillePer = dto.IdNumFamillePer.HasValue ? (int)dto.IdNumFamillePer.Value : (int?)null, // Explicit cast to int
+                    CodeQualitePersonnePer = dto.CodeQualitePersonnePer,
+                    CodeStatutPer = dto.CodeStatutPer,
+                    CodeSituationFamilialePer = dto.CodeSituationFamilialePer,
+                    IdNumAdressePer = dto.IdNumAdressePer.HasValue ? (int)dto.IdNumAdressePer.Value : (int?)null, // Explicit cast to int
+                    CodeCollectivitePer = dto.CodeCollectivitePer,
+                    Autorisation = dto.Autorisation
                 };
 
                 _context.PopPersonnes.Add(entity);
@@ -185,7 +201,7 @@ namespace Dental_reservation.api.Controllers
 
                 var result = new PatientDto
                 {
-                    Id = (int)entity.IdNumPersonne,
+                    Id = entity.IdNumPersonne,
                     Name = $"{entity.PrenomPer ?? ""} {entity.NomPer ?? ""}".Trim(),
                     Email = "",
                     Phone = "",
@@ -215,6 +231,14 @@ namespace Dental_reservation.api.Controllers
             public string? Gender { get; set; }
             public string? Cin { get; set; }
             public string? Matricule { get; set; }
+            public string? CodeCivilitePer { get; set; }
+            public int? IdNumFamillePer { get; set; } // Changed from double? to int?
+            public string? CodeQualitePersonnePer { get; set; }
+            public string? CodeStatutPer { get; set; }
+            public string? CodeSituationFamilialePer { get; set; }
+            public int? IdNumAdressePer { get; set; } // Changed from double? to int?
+            public string? CodeCollectivitePer { get; set; }
+            public string? Autorisation { get; set; }
         }
 
         [HttpPut("{id}")]
@@ -234,12 +258,20 @@ namespace Dental_reservation.api.Controllers
                 entity.CodeSexePer = string.IsNullOrWhiteSpace(dto.Gender) ? entity.CodeSexePer : dto.Gender;
                 entity.CIN = dto.Cin ?? entity.CIN;
                 entity.NumSecuOdPer = dto.Matricule ?? entity.NumSecuOdPer;
+                entity.CodeCivilitePer = dto.CodeCivilitePer ?? entity.CodeCivilitePer;
+                entity.IdNumFamillePer = dto.IdNumFamillePer.HasValue ? (int)dto.IdNumFamillePer.Value : (int?)null; // Explicit cast to int
+                entity.CodeQualitePersonnePer = dto.CodeQualitePersonnePer ?? entity.CodeQualitePersonnePer;
+                entity.CodeStatutPer = dto.CodeStatutPer ?? entity.CodeStatutPer;
+                entity.CodeSituationFamilialePer = dto.CodeSituationFamilialePer ?? entity.CodeSituationFamilialePer;
+                entity.IdNumAdressePer = dto.IdNumAdressePer.HasValue ? (int)dto.IdNumAdressePer.Value : (int?)null; // Explicit cast to int
+                entity.CodeCollectivitePer = dto.CodeCollectivitePer ?? entity.CodeCollectivitePer;
+                entity.Autorisation = dto.Autorisation ?? entity.Autorisation;
 
                 await _context.SaveChangesAsync();
 
                 var result = new PatientDto
                 {
-                    Id = (int)entity.IdNumPersonne,
+                    Id = entity.IdNumPersonne,
                     Name = $"{entity.PrenomPer ?? ""} {entity.NomPer ?? ""}".Trim(),
                     Email = "",
                     Phone = "",
@@ -279,4 +311,4 @@ namespace Dental_reservation.api.Controllers
             }
         }
     }
-} 
+}

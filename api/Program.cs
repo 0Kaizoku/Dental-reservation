@@ -90,4 +90,11 @@ app.MapControllers();
 
 app.MapGet("/", () => "Welcome to the Dental Reservation API!");
 
+// Ensure database is created (for simple schema creation without migrations)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.EnsureCreated();
+}
+
 app.Run();

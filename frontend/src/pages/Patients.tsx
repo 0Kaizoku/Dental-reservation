@@ -55,6 +55,14 @@ const Patients = () => {
   const [gender, setGender] = useState("");
   const [cin, setCin] = useState("");
   const [matricule, setMatricule] = useState("");
+  const [codeCivilitePer, setCodeCivilitePer] = useState("");
+  const [idNumFamillePer, setIdNumFamillePer] = useState("");
+  const [codeQualitePersonnePer, setCodeQualitePersonnePer] = useState("");
+  const [codeStatutPer, setCodeStatutPer] = useState("");
+  const [codeSituationFamilialePer, setCodeSituationFamilialePer] = useState("");
+  const [idNumAdressePer, setIdNumAdressePer] = useState("");
+  const [codeCollectivitePer, setCodeCollectivitePer] = useState("");
+  const [autorisation, setAutorisation] = useState("");
 
   // Edit modal state
   const [openEdit, setOpenEdit] = useState(false);
@@ -65,6 +73,14 @@ const Patients = () => {
   const [editGender, setEditGender] = useState("");
   const [editCin, setEditCin] = useState("");
   const [editMatricule, setEditMatricule] = useState("");
+  const [editCodeCivilitePer, setEditCodeCivilitePer] = useState("");
+  const [editIdNumFamillePer, setEditIdNumFamillePer] = useState("");
+  const [editCodeQualitePersonnePer, setEditCodeQualitePersonnePer] = useState("");
+  const [editCodeStatutPer, setEditCodeStatutPer] = useState("");
+  const [editCodeSituationFamilialePer, setEditCodeSituationFamilialePer] = useState("");
+  const [editIdNumAdressePer, setEditIdNumAdressePer] = useState("");
+  const [editCodeCollectivitePer, setEditCodeCollectivitePer] = useState("");
+  const [editAutorisation, setEditAutorisation] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +92,14 @@ const Patients = () => {
         gender: gender || undefined,
         cin: cin || undefined,
         matricule: matricule || undefined,
+        codeCivilitePer: codeCivilitePer || undefined,
+        idNumFamillePer: idNumFamillePer ? Number(idNumFamillePer) : undefined,
+        codeQualitePersonnePer: codeQualitePersonnePer || undefined,
+        codeStatutPer: codeStatutPer || undefined,
+        codeSituationFamilialePer: codeSituationFamilialePer || undefined,
+        idNumAdressePer: idNumAdressePer ? Number(idNumAdressePer) : undefined,
+        codeCollectivitePer: codeCollectivitePer || undefined,
+        autorisation: autorisation || undefined,
       });
       toast({ title: "Patient saved", description: `${created.name} created successfully.` });
       queryClient.invalidateQueries({ queryKey: ["patients"] });
@@ -86,6 +110,14 @@ const Patients = () => {
       setGender("");
       setCin("");
       setMatricule("");
+      setCodeCivilitePer("");
+      setIdNumFamillePer("");
+      setCodeQualitePersonnePer("");
+      setCodeStatutPer("");
+      setCodeSituationFamilialePer("");
+      setIdNumAdressePer("");
+      setCodeCollectivitePer("");
+      setAutorisation("");
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message || "Could not create patient", variant: "destructive" });
     }
@@ -127,17 +159,25 @@ const Patients = () => {
   const submitEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId == null) return;
-    updateMutation.mutate({
-      id: editingId,
-      payload: {
-        firstName: editFirstName || undefined,
-        lastName: editLastName || undefined,
-        dateOfBirth: editDob || undefined,
-        gender: editGender || undefined,
-        cin: editCin || undefined,
-        matricule: editMatricule || undefined,
-      }
-    });
+          updateMutation.mutate({
+        id: editingId,
+        payload: {
+          firstName: editFirstName || undefined,
+          lastName: editLastName || undefined,
+          dateOfBirth: editDob || undefined,
+          gender: editGender || undefined,
+          cin: editCin || undefined,
+          matricule: editMatricule || undefined,
+          codeCivilitePer: editCodeCivilitePer || undefined,
+          idNumFamillePer: editIdNumFamillePer ? Number(editIdNumFamillePer) : undefined,
+          codeQualitePersonnePer: editCodeQualitePersonnePer || undefined,
+          codeStatutPer: editCodeStatutPer || undefined,
+          codeSituationFamilialePer: editCodeSituationFamilialePer || undefined,
+          idNumAdressePer: editIdNumAdressePer ? Number(editIdNumAdressePer) : undefined,
+          codeCollectivitePer: editCodeCollectivitePer || undefined,
+          autorisation: editAutorisation || undefined,
+        }
+      });
     setOpenEdit(false);
     setEditingId(null);
   };
@@ -243,6 +283,38 @@ const Patients = () => {
                 <div>
                   <Label htmlFor="matricule">Matricule</Label>
                   <Input id="matricule" placeholder="e.g. 123456789" value={matricule} onChange={(e) => setMatricule(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="codeCivilitePer">Code Civilité</Label>
+                  <Input id="codeCivilitePer" placeholder="e.g. M, Mme, Dr" value={codeCivilitePer} onChange={(e) => setCodeCivilitePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="idNumFamillePer">ID Famille</Label>
+                  <Input id="idNumFamillePer" type="number" placeholder="e.g. 123" value={idNumFamillePer} onChange={(e) => setIdNumFamillePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="codeQualitePersonnePer">Qualité Personne</Label>
+                  <Input id="codeQualitePersonnePer" placeholder="e.g. Patient, Accompagnant" value={codeQualitePersonnePer} onChange={(e) => setCodeQualitePersonnePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="codeStatutPer">Statut</Label>
+                  <Input id="codeStatutPer" placeholder="e.g. Actif, Inactif" value={codeStatutPer} onChange={(e) => setCodeStatutPer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="codeSituationFamilialePer">Situation Familiale</Label>
+                  <Input id="codeSituationFamilialePer" placeholder="e.g. Célibataire, Marié" value={codeSituationFamilialePer} onChange={(e) => setCodeSituationFamilialePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="idNumAdressePer">ID Adresse</Label>
+                  <Input id="idNumAdressePer" type="number" placeholder="e.g. 456" value={idNumAdressePer} onChange={(e) => setIdNumAdressePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="codeCollectivitePer">Code Collectivité</Label>
+                  <Input id="codeCollectivitePer" placeholder="e.g. CNSS, RAMED" value={codeCollectivitePer} onChange={(e) => setCodeCollectivitePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="autorisation">Autorisation</Label>
+                  <Input id="autorisation" placeholder="e.g. Oui, Non" value={autorisation} onChange={(e) => setAutorisation(e.target.value)} />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
@@ -421,11 +493,43 @@ const Patients = () => {
                 <Label htmlFor="editCin">CIN</Label>
                 <Input id="editCin" value={editCin} onChange={(e) => setEditCin(e.target.value)} />
               </div>
-              <div>
-                <Label htmlFor="editMatricule">Matricule</Label>
-                <Input id="editMatricule" value={editMatricule} onChange={(e) => setEditMatricule(e.target.value)} />
+                              <div>
+                  <Label htmlFor="editMatricule">Matricule</Label>
+                  <Input id="editMatricule" value={editMatricule} onChange={(e) => setEditMatricule(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editCodeCivilitePer">Code Civilité</Label>
+                  <Input id="editCodeCivilitePer" value={editCodeCivilitePer} onChange={(e) => setEditCodeCivilitePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editIdNumFamillePer">ID Famille</Label>
+                  <Input id="editIdNumFamillePer" type="number" value={editIdNumFamillePer} onChange={(e) => setEditIdNumFamillePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editCodeQualitePersonnePer">Qualité Personne</Label>
+                  <Input id="editCodeQualitePersonnePer" value={editCodeQualitePersonnePer} onChange={(e) => setEditCodeQualitePersonnePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editCodeStatutPer">Statut</Label>
+                  <Input id="editCodeStatutPer" value={editCodeStatutPer} onChange={(e) => setEditCodeStatutPer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editCodeSituationFamilialePer">Situation Familiale</Label>
+                  <Input id="editCodeSituationFamilialePer" value={editCodeSituationFamilialePer} onChange={(e) => setEditCodeSituationFamilialePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editIdNumAdressePer">ID Adresse</Label>
+                  <Input id="editIdNumAdressePer" type="number" value={editIdNumAdressePer} onChange={(e) => setEditIdNumAdressePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editCodeCollectivitePer">Code Collectivité</Label>
+                  <Input id="editCodeCollectivitePer" value={editCodeCollectivitePer} onChange={(e) => setEditCodeCollectivitePer(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editAutorisation">Autorisation</Label>
+                  <Input id="editAutorisation" value={editAutorisation} onChange={(e) => setEditAutorisation(e.target.value)} />
+                </div>
               </div>
-            </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
               <Button type="submit" disabled={updateMutation.isPending}>Save Changes</Button>

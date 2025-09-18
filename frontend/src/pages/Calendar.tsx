@@ -21,13 +21,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { useAppointments } from "@/hooks/useAppointments";
 import { apiService, RdvPatient } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Calendar = () => {
   const { toast } = useToast();
-  const { appointments, addAppointment } = useAppointments();
   const queryClient = useQueryClient();
 
   // Navigation state (week offset from current week)
@@ -53,7 +51,7 @@ const Calendar = () => {
   const [editTime, setEditTime] = useState("");
   const [editDuration, setEditDuration] = useState("");
 
-  // Helpers for week dates
+  // Helper functions
   const getStartOfWeek = (d: Date) => {
     const dateCopy = new Date(d);
     const day = dateCopy.getDay(); // 0 Sun ... 6 Sat
@@ -76,6 +74,7 @@ const Calendar = () => {
     return `${y}-${m}-${day}`;
   };
 
+  // Calculate current week
   const currentWeekStart = useMemo(() => {
     const now = new Date();
     const base = getStartOfWeek(now);
@@ -90,35 +89,73 @@ const Calendar = () => {
     return currentWeekStart.toLocaleString('default', { month: 'long', year: 'numeric' });
   }, [currentWeekStart]);
 
-  // 30-minute slots from 08:00 to 16:30
-  const slots = useMemo(() => {
-    const times: string[] = [];
-    for (let h = 8; h < 17; h++) {
-      const hh = String(h).padStart(2, '0');
-      times.push(`${hh}:00`);
-      times.push(`${hh}:30`);
-    }
-    return times;
-  }, []);
-
-  const toUiItem = (r: RdvPatient) => ({
-    id: r.numRdv ?? Date.now(),
-    date: r.dateRdv ? String(r.dateRdv).slice(0, 10) : "",
-    time: r.heure || "",
-    patient: r.nomPer || "",
-    type: r.natureSoin || "Consultation",
-    duration: r.duree || "30 min",
-    numRdv: r.numRdv,
-  });
-
-  // Load all appointments and filter by week
-  const { data: rdvs } = useQuery({
+  // Load appointments from API
+  const { data: rdvs, isLoading, error } = useQuery({
     queryKey: ["appointments", { scope: "calendar" }],
     queryFn: () => apiService.getAppointments(),
   });
 
-  const serverAppointments = useMemo(() => (rdvs || []).map(toUiItem), [rdvs]);
+  // Transform API data to UI format
+  const toUiItem = (r: RdvPatient) => {
+    let formattedDate = "";
+    if (r.dateRdv) {
+      if (typeof r.dateRdv === 'string') {
+        formattedDate = r.dateRdv.slice(0, 10);
+      } else {
+        const date = new Date(r.dateRdv);
+        formattedDate = date.toISOString().slice(0, 10);
+      }
+    }
 
+    let formattedTime = "";
+    if (r.heure) {
+      formattedTime = r.heure.slice(0, 5);
+    }
+
+    return {
+      id: r.numRdv ?? Date.now(),
+      date: formattedDate,
+      time: formattedTime,
+      patient: r.nomPer || "",
+      type: r.natureSoin || "Consultation",
+      duration: r.duree || "30 min",
+      numRdv: r.numRdv,
+    };
+  };
+
+  const serverAppointments = useMemo(() => {
+    return (rdvs || []).map(toUiItem);
+  }, [rdvs]);
+
+  // Create time slots (standard 30-minute intervals + appointment times)
+  const slots = useMemo(() => {
+    const standardTimes: string[] = [];
+    for (let h = 6; h < 20; h++) {
+      const hh = String(h).padStart(2, '0');
+      standardTimes.push(`${hh}:00`);
+      standardTimes.push(`${hh}:30`);
+    }
+    
+    const appointmentTimes = (rdvs || [])
+      .map(r => r.heure)
+      .filter(time => time && time.length >= 5)
+      .map(time => time.slice(0, 5));
+    
+    const allTimes = [...new Set([...standardTimes, ...appointmentTimes])]
+      .sort((a, b) => a.localeCompare(b));
+    
+    return allTimes;
+  }, [rdvs]);
+
+  // Today's appointments
+  const todayYmd = toYmd(new Date());
+  const todaysAppointments = useMemo(() => {
+    return (serverAppointments || [])
+      .filter(a => a.date === todayYmd)
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [serverAppointments, todayYmd]);
+
+  // Create new appointment
   const handleSubmitNew = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !time || !patientName) {
@@ -139,23 +176,11 @@ const Calendar = () => {
         natureSoin: nature || null,
         nomPer: patientName || null,
       });
-      addAppointment({
-        date,
-        time,
-        patient: patientName,
-        type: nature || "Consultation",
-        duration: duration || "30 min",
-      });
+      
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-
-      // Navigate to the week of the chosen date so it becomes visible immediately
-      const baseWeekStart = getStartOfWeek(new Date());
-      const selectedWeekStart = getStartOfWeek(new Date(date));
-      const diffMs = selectedWeekStart.getTime() - baseWeekStart.getTime();
-      const diffDays = Math.round(diffMs / 86400000);
-      setWeekOffset(Math.round(diffDays / 7));
-
       toast({ title: "Appointment added", description: `${patientName} on ${date} at ${time}` });
+      
+      // Reset form
       setOpenNew(false);
       setPatientName("");
       setPatientId("");
@@ -173,23 +198,60 @@ const Calendar = () => {
     }
   };
 
-  const onClickAppointment = (a: { numRdv?: number; date: string; time: string; duration: string; }) => {
-    if (!a.numRdv) {
-      toast({ title: "Unsaved appointment", description: "Only saved appointments can be edited.", variant: "destructive" });
+  // Navigate to appointments
+  const goToAppointments = () => {
+    if (serverAppointments.length > 0) {
+      // Find the earliest appointment date
+      const appointmentDates = serverAppointments
+        .map(a => a.date)
+        .filter(date => date)
+        .sort();
+      
+      if (appointmentDates.length > 0) {
+        const earliestDate = new Date(appointmentDates[0]);
+        const currentDate = new Date();
+        const baseWeekStart = getStartOfWeek(currentDate);
+        const appointmentWeekStart = getStartOfWeek(earliestDate);
+        
+        // Calculate the difference in weeks
+        const diffMs = appointmentWeekStart.getTime() - baseWeekStart.getTime();
+        const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+        
+        setWeekOffset(diffWeeks);
+        toast({ 
+          title: "Navigated to appointments", 
+          description: `Showing week of ${earliestDate.toLocaleDateString()}` 
+        });
+      }
+    }
+  };
+
+  // Handle clicking on an appointment to edit it
+  const handleAppointmentClick = (appointment: any) => {
+    if (!appointment.numRdv) {
+      toast({ title: "Cannot edit", description: "This appointment cannot be edited.", variant: "destructive" });
       return;
     }
-    const rdv = (rdvs || []).find(r => r.numRdv === a.numRdv);
-    if (!rdv) return;
-    setEditing(rdv);
-    setEditDate(rdv.dateRdv ? String(rdv.dateRdv).slice(0,10) : "");
-    setEditTime(rdv.heure || "");
-    setEditDuration(rdv.duree || "30 min");
+    
+    // Find the original appointment data
+    const originalAppointment = rdvs?.find(r => r.numRdv === appointment.numRdv);
+    if (!originalAppointment) {
+      toast({ title: "Error", description: "Appointment not found.", variant: "destructive" });
+      return;
+    }
+
+    setEditing(originalAppointment);
+    setEditDate(appointment.date);
+    setEditTime(appointment.time);
+    setEditDuration(appointment.duration);
     setOpenEdit(true);
   };
 
-  const submitEdit = async (e: React.FormEvent) => {
+  // Handle updating an appointment
+  const handleUpdateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing || editing.numRdv == null) return;
+
     try {
       await apiService.updateAppointment(Number(editing.numRdv), {
         ...editing,
@@ -197,8 +259,9 @@ const Calendar = () => {
         heure: editTime,
         duree: editDuration || "30 min",
       });
+      
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast({ title: "Appointment updated" });
+      toast({ title: "Appointment updated successfully" });
       setOpenEdit(false);
       setEditing(null);
     } catch (err: any) {
@@ -206,14 +269,24 @@ const Calendar = () => {
     }
   };
 
-  // Today's schedule from state
-  const todayYmd = toYmd(new Date());
-  const todaysAppointments = useMemo(() => {
-    const all = [...(serverAppointments || []), ...appointments];
-    return all
-      .filter(a => a.date === todayYmd)
-      .sort((a, b) => a.time.localeCompare(b.time));
-  }, [serverAppointments, appointments, todayYmd]);
+  // Handle deleting an appointment
+  const handleDeleteAppointment = async () => {
+    if (!editing || editing.numRdv == null) return;
+
+    if (!confirm(`Are you sure you want to delete the appointment for ${editing.nomPer}?`)) {
+      return;
+    }
+
+    try {
+      await apiService.deleteAppointment(Number(editing.numRdv));
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Appointment deleted successfully" });
+      setOpenEdit(false);
+      setEditing(null);
+    } catch (err: any) {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -232,6 +305,11 @@ const Calendar = () => {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+          {serverAppointments && serverAppointments.length > 0 && (
+            <Button variant="outline" onClick={goToAppointments}>
+              Go to Appointments
+            </Button>
+          )}
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
           <DialogTrigger asChild>
@@ -311,49 +389,78 @@ const Calendar = () => {
                 <CalendarIcon className="h-5 w-5 text-dental-blue" />
                 Weekly View
               </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                Total appointments loaded: {serverAppointments.length}
+                {serverAppointments.length > 0 && (
+                  <div>
+                    <div>Sample: {serverAppointments[0]?.patient} on {serverAppointments[0]?.date} at {serverAppointments[0]?.time}</div>
+                    <div>Appointment dates: {[...new Set(serverAppointments.map(a => a.date))].join(", ")}</div>
+                    <div>Current week: {weekDates.map(d => toYmd(d)).join(" - ")}</div>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {/* Days header */}
-                <div className="grid grid-cols-8 gap-2">
-                  <div className="p-2"></div>
-                  {weekDates.map((d, idx) => (
-                    <div key={idx} className="p-2 text-center font-medium text-muted-foreground">
-                      {d.toLocaleDateString(undefined, { weekday: 'short' })}
-                      <div className="text-xs text-foreground/70">{d.getDate()}</div>
-                    </div>
-                  ))}
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">Loading appointments...</div>
                 </div>
-
-                {/* Time slots */}
-                <div className="grid grid-cols-8 gap-2">
-                  {slots.map((slot) => (
-                    <div key={slot} className="grid grid-cols-8 col-span-8 gap-2 border-b border-border/50 pb-2 mb-2">
-                      <div className="p-2 text-sm text-muted-foreground font-medium">
-                        {slot}
+              ) : error ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-destructive">Error loading appointments: {error.message}</div>
+                </div>
+              ) : !serverAppointments || serverAppointments.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-muted-foreground">No appointments found. Try clicking "Go to Appointments" or create a new appointment.</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Days header */}
+                  <div className="grid grid-cols-8 gap-2">
+                    <div className="p-2"></div>
+                    {weekDates.map((d, idx) => (
+                      <div key={idx} className="p-2 text-center font-medium text-muted-foreground">
+                        {d.toLocaleDateString(undefined, { weekday: 'short' })}
+                        <div className="text-xs text-foreground/70">{d.getDate()}</div>
                       </div>
-                      {weekDates.map((d, dayIndex) => {
-                        const ymd = toYmd(d);
-                        const allItems = [...(serverAppointments || []), ...appointments];
-                        const items = allItems.filter(a => a.date === ymd && a.time === slot);
-                        return (
-                          <div
-                            key={`${slot}-${dayIndex}`}
-                            className="p-2 min-h-[60px] border border-border/20 rounded-md hover:bg-accent/20 cursor-pointer transition-colors"
-                          >
-                            {items.map((a) => (
-                              <div key={a.id} className="bg-dental-blue/10 border border-dental-blue/20 rounded p-1 text-xs mb-1" onClick={() => onClickAppointment(a)}>
-                                <div className="font-medium text-dental-blue">{a.patient}</div>
-                                <div className="text-muted-foreground">{a.type}</div>
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+
+                  {/* Time slots */}
+                  <div className="grid grid-cols-8 gap-2">
+                    {slots.map((slot) => (
+                      <div key={slot} className="grid grid-cols-8 col-span-8 gap-2 border-b border-border/50 pb-2 mb-2">
+                        <div className="p-2 text-sm text-muted-foreground font-medium">
+                          {slot}
+                        </div>
+                        {weekDates.map((d, dayIndex) => {
+                          const ymd = toYmd(d);
+                          const items = (serverAppointments || []).filter(a => a.date === ymd && a.time === slot);
+                          return (
+                            <div
+                              key={`${slot}-${dayIndex}`}
+                              className="p-2 min-h-[60px] border border-border/20 rounded-md hover:bg-accent/20 cursor-pointer transition-colors"
+                            >
+                              {items.map((a) => (
+                                <div 
+                                  key={a.id} 
+                                  className="bg-dental-blue/10 border border-dental-blue/20 rounded p-1 text-xs mb-1 cursor-pointer hover:bg-dental-blue/20 hover:border-dental-blue/40 transition-all duration-200 group"
+                                  onClick={() => handleAppointmentClick(a)}
+                                  title="Click to edit appointment"
+                                >
+                                  <div className="font-medium text-dental-blue group-hover:text-dental-blue/80">{a.patient}</div>
+                                  <div className="text-muted-foreground text-xs">{a.type}</div>
+                                  <div className="text-xs text-muted-foreground/70 mt-1">Click to edit</div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -414,7 +521,7 @@ const Calendar = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Total Hours</span>
-                <span className="font-medium text-foreground">{/* Placeholder */}—</span>
+                <span className="font-medium text-foreground">—</span>
               </div>
             </CardContent>
           </Card>
@@ -423,37 +530,51 @@ const Calendar = () => {
 
       {/* Edit Appointment Modal */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="sm:max-w-[560px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Appointment</DialogTitle>
           </DialogHeader>
           {editing && (
-            <form className="space-y-4" onSubmit={submitEdit}>
+            <form className="space-y-4" onSubmit={handleUpdateAppointment}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Patient</Label>
-                  <Input value={editing.nomPer || ""} readOnly />
+                  <Label>Patient Name</Label>
+                  <Input value={editing.nomPer || ""} readOnly className="bg-muted" />
                 </div>
                 <div>
                   <Label>Doctor</Label>
-                  <Input value={editing.nomPs || ""} readOnly />
+                  <Input value={editing.nomPs || ""} readOnly className="bg-muted" />
                 </div>
                 <div>
                   <Label>Cabinet</Label>
-                  <Input value={editing.numCabinet || ""} readOnly />
+                  <Input value={editing.numCabinet || ""} readOnly className="bg-muted" />
                 </div>
                 <div>
-                  <Label>Date</Label>
-                  <Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+                  <Label>Nature of Care</Label>
+                  <Input value={editing.natureSoin || ""} readOnly className="bg-muted" />
                 </div>
                 <div>
-                  <Label>Time</Label>
-                  <Input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+                  <Label htmlFor="editDate">Date</Label>
+                  <Input 
+                    id="editDate" 
+                    type="date" 
+                    value={editDate} 
+                    onChange={(e) => setEditDate(e.target.value)} 
+                  />
                 </div>
                 <div>
-                  <Label>Duration</Label>
+                  <Label htmlFor="editTime">Time</Label>
+                  <Input 
+                    id="editTime" 
+                    type="time" 
+                    value={editTime} 
+                    onChange={(e) => setEditTime(e.target.value)} 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="editDuration">Duration</Label>
                   <Select value={editDuration} onValueChange={setEditDuration}>
-                    <SelectTrigger>
+                    <SelectTrigger id="editDuration">
                       <SelectValue placeholder="Select duration" />
                     </SelectTrigger>
                     <SelectContent>
@@ -461,13 +582,37 @@ const Calendar = () => {
                       <SelectItem value="30 min">30 minutes</SelectItem>
                       <SelectItem value="45 min">45 minutes</SelectItem>
                       <SelectItem value="60 min">60 minutes</SelectItem>
+                      <SelectItem value="90 min">90 minutes</SelectItem>
+                      <SelectItem value="120 min">120 minutes</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label>Observation</Label>
+                  <Textarea 
+                    value={editing.observation || ""} 
+                    readOnly 
+                    className="bg-muted"
+                    rows={3}
+                  />
+                </div>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>Cancel</Button>
-                <Button type="submit">Save Changes</Button>
+              <div className="flex justify-between pt-2">
+                <Button 
+                  type="button" 
+                  variant="destructive" 
+                  onClick={handleDeleteAppointment}
+                >
+                  Delete Appointment
+                </Button>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setOpenEdit(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Update Appointment
+                  </Button>
+                </div>
               </div>
             </form>
           )}

@@ -110,6 +110,14 @@ class ApiService {
     gender?: string; // "1" or "2"
     cin?: string;
     matricule?: string;
+    codeCivilitePer?: string;
+    idNumFamillePer?: number;
+    codeQualitePersonnePer?: string;
+    codeStatutPer?: string;
+    codeSituationFamilialePer?: string;
+    idNumAdressePer?: number;
+    codeCollectivitePer?: string;
+    autorisation?: string;
   }): Promise<Patient> {
     const response = await fetch(`${API_BASE_URL}/Patients`, {
       method: 'POST',
@@ -126,6 +134,14 @@ class ApiService {
     gender?: string;
     cin?: string;
     matricule?: string;
+    codeCivilitePer?: string;
+    idNumFamillePer?: number;
+    codeQualitePersonnePer?: string;
+    codeStatutPer?: string;
+    codeSituationFamilialePer?: string;
+    idNumAdressePer?: number;
+    codeCollectivitePer?: string;
+    autorisation?: string;
   }): Promise<Patient> {
     const response = await fetch(`${API_BASE_URL}/Patients/${id}`, {
       method: 'PUT',

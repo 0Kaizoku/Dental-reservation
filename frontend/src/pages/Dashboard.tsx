@@ -69,19 +69,34 @@ const Dashboard = () => {
     queryFn: () => apiService.getAppointments(),
   });
 
-  const { data: todayAppointments } = useQuery({
-    queryKey: ["appointments", { date: today }],
-    queryFn: () => apiService.getAppointments({ date: today }),
-  });
+  // Calculate today's appointments from all appointments
+  const todaysAppointments = useMemo(() => {
+    if (!allAppointments) return [];
+    
+    const todayYmd = new Date().toISOString().slice(0, 10);
+    return allAppointments.filter(appointment => {
+      if (!appointment.dateRdv) return false;
+      
+      // Handle different date formats
+      let appointmentDate = "";
+      if (typeof appointment.dateRdv === 'string') {
+        appointmentDate = appointment.dateRdv.slice(0, 10);
+      } else {
+        appointmentDate = new Date(appointment.dateRdv).toISOString().slice(0, 10);
+      }
+      
+      return appointmentDate === todayYmd;
+    });
+  }, [allAppointments]);
 
   const stats = {
     totalAppointments: allAppointments?.length || 0,
-    todayAppointments: todayAppointments?.length || 0,
+    todayAppointments: todaysAppointments.length,
     totalPatients: patientStats?.total || 0,
     availableSlots: 0,
   };
 
-  const recentAppointments = (todayAppointments || []).slice(0, 6).map((r, idx) => ({
+  const recentAppointments = todaysAppointments.slice(0, 6).map((r, idx) => ({
     id: r.numRdv ?? idx,
     patient: r.nomPer || "",
     time: r.heure || "",
