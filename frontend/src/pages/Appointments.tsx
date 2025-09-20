@@ -45,6 +45,7 @@ const toUiItem = (r: RdvPatient) => ({
   id: r.numRdv ?? Date.now(),
   patient: r.nomPer || "",
   doctor: r.nomPs || "",
+  cabinet: r.numCabinet || "",
   date: r.dateRdv ? String(r.dateRdv).slice(0, 10) : "",
   time: r.heure || "",
   type: r.natureSoin || "",
@@ -178,6 +179,7 @@ const Appointments = () => {
   const filteredAppointments = uiAppointments.filter(appointment => {
     const matchesSearch = appointment.patient.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          appointment.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         appointment.cabinet.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          appointment.type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || appointment.status === statusFilter;
     
@@ -271,7 +273,7 @@ const Appointments = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search patients, doctors, or appointment types..."
+                placeholder="Search patients, doctors, cabinets, or appointment types..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -314,6 +316,7 @@ const Appointments = () => {
                 <TableRow>
                   <TableHead>Patient</TableHead>
                   <TableHead>Doctor</TableHead>
+                  <TableHead>Cabinet</TableHead>
                   <TableHead>Date & Time</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Duration</TableHead>
@@ -323,7 +326,7 @@ const Appointments = () => {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableRow><TableCell colSpan={7}>Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={8}>Loading...</TableCell></TableRow>
                 ) : filteredAppointments.map((appointment) => {
                   const rdv = (rdvs || []).find(r => r.numRdv === appointment.numRdv);
                   return (
@@ -332,6 +335,11 @@ const Appointments = () => {
                         {appointment.patient}
                       </TableCell>
                       <TableCell>{appointment.doctor}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {appointment.cabinet || "N/A"}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />

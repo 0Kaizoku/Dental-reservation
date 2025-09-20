@@ -35,17 +35,6 @@ const Dashboard = () => {
 
   // UI state for dialogs
   const [openNewAppointment, setOpenNewAppointment] = useState(false);
-  const [openNewPatient, setOpenNewPatient] = useState(false);
-
-  // New Patient form state
-  const [patientFirstName, setPatientFirstName] = useState("");
-  const [patientLastName, setPatientLastName] = useState("");
-  const [patientDob, setPatientDob] = useState("");
-  const [patientGender, setPatientGender] = useState("");
-  const [patientCin, setPatientCin] = useState("");
-  const [patientMatricule, setPatientMatricule] = useState("");
-  const [patientEmail, setPatientEmail] = useState("");
-  const [patientPhone, setPatientPhone] = useState("");
 
   // New Appointment form state
   const [appointmentPatientId, setAppointmentPatientId] = useState("");
@@ -148,34 +137,6 @@ const Dashboard = () => {
     return variants[status as keyof typeof variants] || variants.pending;
   };
 
-  const handleSubmitNewPatient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await apiService.createPatient({
-        firstName: patientFirstName || undefined,
-        lastName: patientLastName || undefined,
-        dateOfBirth: patientDob || undefined,
-        gender: patientGender || undefined,
-        cin: patientCin || undefined,
-        matricule: patientMatricule || undefined,
-        email: patientEmail || undefined,
-        phone: patientPhone || undefined,
-      });
-      toast({ title: "Patient saved" });
-      queryClient.invalidateQueries({ queryKey: ["patient-stats"] });
-      setOpenNewPatient(false);
-      setPatientFirstName("");
-      setPatientLastName("");
-      setPatientDob("");
-      setPatientGender("");
-      setPatientCin("");
-      setPatientMatricule("");
-      setPatientEmail("");
-      setPatientPhone("");
-    } catch (err: any) {
-      toast({ title: "Save failed", description: err.message, variant: "destructive" });
-    }
-  };
 
   const handleSubmitNewAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -409,82 +370,23 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <Dialog open={openNewAppointment} onOpenChange={setOpenNewAppointment}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
-                  >
-                    <CalendarCheck className="w-5 h-5 text-dental-blue" />
-                    <span className="text-sm">New Appointment</span>
-                  </Button>
-                </DialogTrigger>
-              </Dialog>
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/appointments')}
+              >
+                <CalendarCheck className="w-5 h-5 text-dental-blue" />
+                <span className="text-sm">New Appointment</span>
+              </Button>
 
-              <Dialog open={openNewPatient} onOpenChange={setOpenNewPatient}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
-                  >
-                    <Users className="w-5 h-5 text-dental-blue" />
-                    <span className="text-sm">Add Patient</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px]">
-                  <DialogHeader>
-                    <DialogTitle>New Patient</DialogTitle>
-                  </DialogHeader>
-                  <form className="space-y-4" onSubmit={handleSubmitNewPatient}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="firstName">First name</Label>
-                        <Input id="firstName" placeholder="e.g. Sarah" value={patientFirstName} onChange={(e) => setPatientFirstName(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor="lastName">Last name</Label>
-                        <Input id="lastName" placeholder="e.g. Johnson" value={patientLastName} onChange={(e) => setPatientLastName(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor="dob">Date of birth</Label>
-                        <Input id="dob" type="date" value={patientDob} onChange={(e) => setPatientDob(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor="gender">Gender</Label>
-                        <Select value={patientGender} onValueChange={setPatientGender}>
-                          <SelectTrigger id="gender">
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">Male</SelectItem>
-                            <SelectItem value="2">Female</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="cin">CIN</Label>
-                        <Input id="cin" placeholder="e.g. AA123456" value={patientCin} onChange={(e) => setPatientCin(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor="matricule">Matricule</Label>
-                        <Input id="matricule" placeholder="e.g. 123456789" value={patientMatricule} onChange={(e) => setPatientMatricule(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="e.g. patient@example.com" value={patientEmail} onChange={(e) => setPatientEmail(e.target.value)} />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" type="tel" placeholder="e.g. +33 1 23 45 67 89" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 pt-2">
-                      <Button type="button" variant="outline" onClick={() => setOpenNewPatient(false)}>Cancel</Button>
-                      <Button type="submit">Save Patient</Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                variant="outline" 
+                className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/patients')}
+              >
+                <Users className="w-5 h-5 text-dental-blue" />
+                <span className="text-sm">Add Patient</span>
+              </Button>
 
               <Button 
                 variant="outline" 
