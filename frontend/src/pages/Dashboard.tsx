@@ -89,11 +89,43 @@ const Dashboard = () => {
     });
   }, [allAppointments]);
 
+  // Calculate available slots for today
+  const availableSlotsToday = useMemo(() => {
+    // Generate time slots for today (8 AM to 5:30 PM, 30-minute intervals)
+    const timeSlots: string[] = [];
+    for (let hour = 8; hour <= 17; hour++) {
+      for (let minutes = 0; minutes < 60; minutes += 30) {
+        // Skip 17:30 and beyond
+        if (hour === 17 && minutes > 30) break;
+        
+        const timeString = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        timeSlots.push(timeString);
+      }
+    }
+    
+    // Get booked slots for today
+    const bookedSlots = todaysAppointments
+      .map(appointment => appointment.heure)
+      .filter(Boolean)
+      .map(time => time?.slice(0, 5) || "");
+    
+    // Calculate available slots
+    const totalSlots = timeSlots.length;
+    const bookedCount = bookedSlots.length;
+    const availableCount = totalSlots - bookedCount;
+    
+    return {
+      total: totalSlots,
+      available: availableCount,
+      booked: bookedCount
+    };
+  }, [todaysAppointments]);
+
   const stats = {
     totalAppointments: allAppointments?.length || 0,
     todayAppointments: todaysAppointments.length,
     totalPatients: patientStats?.total || 0,
-    availableSlots: 0,
+    availableSlots: availableSlotsToday.available,
   };
 
   const recentAppointments = todaysAppointments.slice(0, 6).map((r, idx) => ({

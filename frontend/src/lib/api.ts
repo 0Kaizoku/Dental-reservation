@@ -183,6 +183,19 @@ class ApiService {
     return this.handleResponse<RdvPatient[]>(response);
   }
 
+  // Available Slots
+  async getAvailableSlots(doctor?: string, cabinet?: string, date?: string): Promise<string[]> {
+    const search = new URLSearchParams();
+    if (doctor) search.append('doctor', doctor);
+    if (cabinet) search.append('cabinet', cabinet);
+    if (date) search.append('date', date);
+
+    const response = await fetch(`${API_BASE_URL}/RendezVous/available-slots?${search.toString()}`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<string[]>(response);
+  }
+
   // Profile
   async getProfile(): Promise<{ username: string; lastName?: string; userType?: string; }>{
     const response = await fetch(`${API_BASE_URL}/Profile/me`, {

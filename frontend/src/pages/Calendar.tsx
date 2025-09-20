@@ -130,7 +130,7 @@ const Calendar = () => {
   // Create time slots (standard 30-minute intervals + appointment times)
   const slots = useMemo(() => {
     const standardTimes: string[] = [];
-    for (let h = 6; h < 20; h++) {
+    for (let h = 8; h < 18; h++) {
       const hh = String(h).padStart(2, '0');
       standardTimes.push(`${hh}:00`);
       standardTimes.push(`${hh}:30`);

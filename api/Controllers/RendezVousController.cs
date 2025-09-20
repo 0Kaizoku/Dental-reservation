@@ -197,16 +197,19 @@ namespace Dental_reservation.api.Controllers
         [HttpGet("available-slots")]
         public async Task<IActionResult> GetAvailableSlots([FromQuery] string doctor, [FromQuery] string cabinet, [FromQuery] DateTime date)
         {
-            // Define your working hours and slot duration
-            var startHour = 9;
+            // Define your working hours and slot duration (8:00 to 17:30)
+            var startHour = 8;
             var endHour = 17;
             var slotMinutes = 30;
             var slots = new List<string>();
 
-            for (var hour = startHour; hour < endHour; hour++)
+            for (var hour = startHour; hour <= endHour; hour++)
             {
                 slots.Add($"{hour:D2}:00");
                 slots.Add($"{hour:D2}:30");
+                
+                // Stop at 17:30
+                if (hour == 17) break;
             }
 
             // Get all booked slots for this doctor or cabinet on this date
