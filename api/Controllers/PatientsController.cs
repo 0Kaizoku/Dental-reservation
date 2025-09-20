@@ -41,10 +41,8 @@ namespace Dental_reservation.api.Controllers
                 {
                     Id = p.IdNumPersonne,
                     Name = $"{p.PrenomPer ?? ""} {p.NomPer ?? ""}".Trim(),
-                    // Email = $"patient.{p.IdNumPersonne}@example.com", // TODO: Add email field to database
-                    Email = "", // Placeholder for future development
-                    // Phone = $"+33 1 {p.IdNumPersonne.ToString().PadLeft(8, '0')}", // TODO: Add phone field to database
-                    Phone = "", // Placeholder for future development
+                    Email = p.Email ?? "",
+                    Phone = p.Phone ?? "",
                     DateOfBirth = p.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
                     Gender = p.CodeSexePer == "1" ? "Male" : p.CodeSexePer == "2" ? "Female" : "Unknown",
                     // LastVisit = "", // TODO: Populate from appointments table
@@ -98,10 +96,8 @@ namespace Dental_reservation.api.Controllers
                 {
                     Id = patient.IdNumPersonne,
                     Name = $"{patient.PrenomPer ?? ""} {patient.NomPer ?? ""}".Trim(),
-                    // Email = $"patient.{patient.IdNumPersonne}@example.com", // TODO: Add email field to database
-                    Email = "", // Placeholder for future development
-                    // Phone = $"+33 1 {patient.IdNumPersonne.ToString().PadLeft(8, '0')}", // TODO: Add phone field to database
-                    Phone = "", // Placeholder for future development
+                    Email = patient.Email ?? "",
+                    Phone = patient.Phone ?? "",
                     DateOfBirth = patient.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
                     Gender = patient.CodeSexePer == "1" ? "Male" : patient.CodeSexePer == "2" ? "Female" : "Unknown",
                     // LastVisit = "", // TODO: Populate from appointments table
@@ -171,6 +167,8 @@ namespace Dental_reservation.api.Controllers
             public int? IdNumAdressePer { get; set; } // Changed from double? to int?
             public string? CodeCollectivitePer { get; set; }
             public string? Autorisation { get; set; }
+            public string? Email { get; set; }
+            public string? Phone { get; set; }
         }
 
         [HttpPost]
@@ -193,7 +191,9 @@ namespace Dental_reservation.api.Controllers
                     CodeSituationFamilialePer = dto.CodeSituationFamilialePer,
                     IdNumAdressePer = dto.IdNumAdressePer.HasValue ? (int)dto.IdNumAdressePer.Value : (int?)null, // Explicit cast to int
                     CodeCollectivitePer = dto.CodeCollectivitePer,
-                    Autorisation = dto.Autorisation
+                    Autorisation = dto.Autorisation,
+                    Email = dto.Email,
+                    Phone = dto.Phone
                 };
 
                 _context.PopPersonnes.Add(entity);
@@ -203,8 +203,8 @@ namespace Dental_reservation.api.Controllers
                 {
                     Id = entity.IdNumPersonne,
                     Name = $"{entity.PrenomPer ?? ""} {entity.NomPer ?? ""}".Trim(),
-                    Email = "",
-                    Phone = "",
+                    Email = entity.Email ?? "",
+                    Phone = entity.Phone ?? "",
                     DateOfBirth = entity.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
                     Gender = entity.CodeSexePer == "1" ? "Male" : entity.CodeSexePer == "2" ? "Female" : "Unknown",
                     LastVisit = "",
@@ -239,6 +239,8 @@ namespace Dental_reservation.api.Controllers
             public int? IdNumAdressePer { get; set; } // Changed from double? to int?
             public string? CodeCollectivitePer { get; set; }
             public string? Autorisation { get; set; }
+            public string? Email { get; set; }
+            public string? Phone { get; set; }
         }
 
         [HttpPut("{id}")]
@@ -266,6 +268,8 @@ namespace Dental_reservation.api.Controllers
                 entity.IdNumAdressePer = dto.IdNumAdressePer.HasValue ? (int)dto.IdNumAdressePer.Value : (int?)null; // Explicit cast to int
                 entity.CodeCollectivitePer = dto.CodeCollectivitePer ?? entity.CodeCollectivitePer;
                 entity.Autorisation = dto.Autorisation ?? entity.Autorisation;
+                entity.Email = dto.Email ?? entity.Email;
+                entity.Phone = dto.Phone ?? entity.Phone;
 
                 await _context.SaveChangesAsync();
 
@@ -273,8 +277,8 @@ namespace Dental_reservation.api.Controllers
                 {
                     Id = entity.IdNumPersonne,
                     Name = $"{entity.PrenomPer ?? ""} {entity.NomPer ?? ""}".Trim(),
-                    Email = "",
-                    Phone = "",
+                    Email = entity.Email ?? "",
+                    Phone = entity.Phone ?? "",
                     DateOfBirth = entity.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
                     Gender = entity.CodeSexePer == "1" ? "Male" : entity.CodeSexePer == "2" ? "Female" : "Unknown",
                     LastVisit = "",
@@ -308,6 +312,92 @@ namespace Dental_reservation.api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error deleting patient", error = ex.Message });
+            }
+        }
+
+        [HttpGet("debug/test-database")]
+        public async Task<IActionResult> TestDatabase()
+        {
+            try
+            {
+                // Test database connection
+                var canConnect = await _context.Database.CanConnectAsync();
+                if (!canConnect)
+                {
+                    return StatusCode(500, new { message = "Cannot connect to database" });
+                }
+
+                // Test table structure
+                var tableExists = await _context.Database.ExecuteSqlRawAsync("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'pop_personne'") >= 0;
+                if (!tableExists)
+                {
+                    return StatusCode(500, new { message = "pop_personne table does not exist" });
+                }
+
+                // Check if Email and Phone columns exist
+                var emailColumnExists = await _context.Database.ExecuteSqlRawAsync("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'pop_personne' AND COLUMN_NAME = 'Email Per'") >= 0;
+                var phoneColumnExists = await _context.Database.ExecuteSqlRawAsync("SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'pop_personne' AND COLUMN_NAME = 'Phone Per'") >= 0;
+
+                // Get table structure
+                var columns = await _context.Database.ExecuteSqlRawAsync("SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'pop_personne' ORDER BY ORDINAL_POSITION");
+
+                // Count existing records
+                var recordCount = await _context.PopPersonnes.CountAsync();
+
+                return Ok(new
+                {
+                    message = "Database connection successful",
+                    canConnect,
+                    tableExists,
+                    emailColumnExists,
+                    phoneColumnExists,
+                    recordCount,
+                    connectionString = _context.Database.GetConnectionString()?.Substring(0, Math.Min(50, _context.Database.GetConnectionString()?.Length ?? 0)) + "..."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Database test failed", error = ex.Message, stackTrace = ex.StackTrace });
+            }
+        }
+
+        [HttpPost("debug/test-create")]
+        public async Task<IActionResult> TestCreatePatient()
+        {
+            try
+            {
+                var testPatient = new PopPersonne
+                {
+                    PrenomPer = "Test",
+                    NomPer = "Patient",
+                    Email = "test@example.com",
+                    Phone = "+33 1 23 45 67 89",
+                    DateNaissancePer = DateTime.Now.AddYears(-30),
+                    CodeSexePer = "1",
+                    CIN = "TEST123456",
+                    NumSecuOdPer = "123456789"
+                };
+
+                _context.PopPersonnes.Add(testPatient);
+                var result = await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = "Test patient created successfully",
+                    patientId = testPatient.IdNumPersonne,
+                    rowsAffected = result,
+                    patient = new
+                    {
+                        id = testPatient.IdNumPersonne,
+                        name = $"{testPatient.PrenomPer} {testPatient.NomPer}",
+                        email = testPatient.Email,
+                        phone = testPatient.Phone
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Test patient creation failed", error = ex.Message, stackTrace = ex.StackTrace });
             }
         }
     }

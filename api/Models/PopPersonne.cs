@@ -56,5 +56,11 @@ namespace Dental_reservation.api.Models
 
         [Column("CIN")]
         public string? CIN { get; set; }
+
+        [Column("Email Per")]
+        public string? Email { get; set; }
+
+        [Column("Phone Per")]
+        public string? Phone { get; set; }
     }
 } 

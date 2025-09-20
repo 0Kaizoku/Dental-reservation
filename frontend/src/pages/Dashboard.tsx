@@ -44,6 +44,8 @@ const Dashboard = () => {
   const [patientGender, setPatientGender] = useState("");
   const [patientCin, setPatientCin] = useState("");
   const [patientMatricule, setPatientMatricule] = useState("");
+  const [patientEmail, setPatientEmail] = useState("");
+  const [patientPhone, setPatientPhone] = useState("");
 
   // New Appointment form state
   const [appointmentPatientId, setAppointmentPatientId] = useState("");
@@ -156,6 +158,8 @@ const Dashboard = () => {
         gender: patientGender || undefined,
         cin: patientCin || undefined,
         matricule: patientMatricule || undefined,
+        email: patientEmail || undefined,
+        phone: patientPhone || undefined,
       });
       toast({ title: "Patient saved" });
       queryClient.invalidateQueries({ queryKey: ["patient-stats"] });
@@ -166,6 +170,8 @@ const Dashboard = () => {
       setPatientGender("");
       setPatientCin("");
       setPatientMatricule("");
+      setPatientEmail("");
+      setPatientPhone("");
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     }
@@ -462,6 +468,14 @@ const Dashboard = () => {
                       <div>
                         <Label htmlFor="matricule">Matricule</Label>
                         <Input id="matricule" placeholder="e.g. 123456789" value={patientMatricule} onChange={(e) => setPatientMatricule(e.target.value)} />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input id="email" type="email" placeholder="e.g. patient@example.com" value={patientEmail} onChange={(e) => setPatientEmail(e.target.value)} />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input id="phone" type="tel" placeholder="e.g. +33 1 23 45 67 89" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">

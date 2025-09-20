@@ -63,6 +63,8 @@ const Patients = () => {
   const [idNumAdressePer, setIdNumAdressePer] = useState("");
   const [codeCollectivitePer, setCodeCollectivitePer] = useState("");
   const [autorisation, setAutorisation] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   // Edit modal state
   const [openEdit, setOpenEdit] = useState(false);
@@ -81,6 +83,8 @@ const Patients = () => {
   const [editIdNumAdressePer, setEditIdNumAdressePer] = useState("");
   const [editCodeCollectivitePer, setEditCodeCollectivitePer] = useState("");
   const [editAutorisation, setEditAutorisation] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,6 +104,8 @@ const Patients = () => {
         idNumAdressePer: idNumAdressePer ? Number(idNumAdressePer) : undefined,
         codeCollectivitePer: codeCollectivitePer || undefined,
         autorisation: autorisation || undefined,
+        email: email || undefined,
+        phone: phone || undefined,
       });
       toast({ title: "Patient saved", description: `${created.name} created successfully.` });
       queryClient.invalidateQueries({ queryKey: ["patients"] });
@@ -118,6 +124,8 @@ const Patients = () => {
       setIdNumAdressePer("");
       setCodeCollectivitePer("");
       setAutorisation("");
+      setEmail("");
+      setPhone("");
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message || "Could not create patient", variant: "destructive" });
     }
@@ -142,7 +150,7 @@ const Patients = () => {
     onError: (err: any) => toast({ title: "Delete failed", description: err.message, variant: "destructive" })
   });
 
-  const startEdit = (p: { id: number; name: string; gender?: string; }): void => {
+  const startEdit = (p: { id: number; name: string; gender?: string; email?: string; phone?: string; }): void => {
     setEditingId(p.id);
     const parts = (p.name || "").trim().split(" ");
     const first = parts.shift() || "";
@@ -153,6 +161,8 @@ const Patients = () => {
     setEditDob("");
     setEditCin("");
     setEditMatricule("");
+    setEditEmail(p.email || "");
+    setEditPhone(p.phone || "");
     setOpenEdit(true);
   };
 
@@ -168,6 +178,8 @@ const Patients = () => {
           gender: editGender || undefined,
           cin: editCin || undefined,
           matricule: editMatricule || undefined,
+          email: editEmail || undefined,
+          phone: editPhone || undefined,
           codeCivilitePer: editCodeCivilitePer || undefined,
           idNumFamillePer: editIdNumFamillePer ? Number(editIdNumFamillePer) : undefined,
           codeQualitePersonnePer: editCodeQualitePersonnePer || undefined,
@@ -315,6 +327,14 @@ const Patients = () => {
                 <div>
                   <Label htmlFor="autorisation">Autorisation</Label>
                   <Input id="autorisation" placeholder="e.g. Oui, Non" value={autorisation} onChange={(e) => setAutorisation(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="e.g. patient@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input id="phone" type="tel" placeholder="e.g. +33 1 23 45 67 89" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
@@ -496,6 +516,14 @@ const Patients = () => {
                               <div>
                   <Label htmlFor="editMatricule">Matricule</Label>
                   <Input id="editMatricule" value={editMatricule} onChange={(e) => setEditMatricule(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editEmail">Email</Label>
+                  <Input id="editEmail" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+                </div>
+                <div>
+                  <Label htmlFor="editPhone">Phone</Label>
+                  <Input id="editPhone" type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
                 </div>
                 <div>
                   <Label htmlFor="editCodeCivilitePer">Code Civilité</Label>

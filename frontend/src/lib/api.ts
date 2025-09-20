@@ -118,6 +118,8 @@ class ApiService {
     idNumAdressePer?: number;
     codeCollectivitePer?: string;
     autorisation?: string;
+    email?: string;
+    phone?: string;
   }): Promise<Patient> {
     const response = await fetch(`${API_BASE_URL}/Patients`, {
       method: 'POST',
@@ -142,6 +144,8 @@ class ApiService {
     idNumAdressePer?: number;
     codeCollectivitePer?: string;
     autorisation?: string;
+    email?: string;
+    phone?: string;
   }): Promise<Patient> {
     const response = await fetch(`${API_BASE_URL}/Patients/${id}`, {
       method: 'PUT',
