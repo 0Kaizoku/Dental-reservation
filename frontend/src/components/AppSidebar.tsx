@@ -81,17 +81,17 @@ export function AppSidebar() {
     <Sidebar
       collapsible="icon"
     >
-      <SidebarContent className="bg-card border-r border-border">
+      <SidebarContent className="p-4 bg-white border-r border-gray-300 shadow-md">
         {/* Header */}
-        <div className={`p-4 border-b border-border ${isCollapsed ? "px-2" : ""}`}>
+        <div className={`p-4 border-b border-gray-300 ${isCollapsed ? "px-2" : ""}`}>
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Stethoscope className="w-5 h-5 text-primary-foreground" />
             </div>
             {!isCollapsed && (
               <div>
-                <h2 className="font-semibold text-foreground">DentalCare</h2>
-                <p className="text-xs text-muted-foreground">Management System</p>
+                <h2 className="font-bold text-gray-800">DentalCare</h2>
+                <p className="text-xs text-gray-500">Management System</p>
               </div>
             )}
           </div>
@@ -99,7 +99,7 @@ export function AppSidebar() {
 
         {/* Main Navigation */}
         <SidebarGroup className="flex-1">
-          <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={isCollapsed ? "sr-only" : "text-gray-600 font-semibold uppercase text-xs tracking-wide mb-2"}>
             Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -110,13 +110,17 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       end 
-                      className={getNavClassName}
+                      className={({ isActive }) =>
+                        isActive
+                          ? "flex items-center gap-3 p-3 rounded-md bg-gray-100 text-primary font-medium shadow-sm"
+                          : "flex items-center gap-3 p-3 rounded-md text-gray-700 hover:bg-gray-50 hover:text-primary transition-all"
+                      }
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
                       {!isCollapsed && (
                         <div className="ml-3 flex-1">
                           <span className="block font-medium">{item.title}</span>
-                          <span className="block text-xs text-muted-foreground">
+                          <span className="block text-xs text-gray-500">
                             {item.description}
                           </span>
                         </div>
@@ -131,7 +135,7 @@ export function AppSidebar() {
 
         {/* Settings */}
         <SidebarGroup>
-          <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
+          <SidebarGroupLabel className={isCollapsed ? "sr-only" : "text-gray-600 font-semibold uppercase text-xs tracking-wide mb-2"}>
             Settings
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -142,13 +146,17 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       end 
-                      className={getNavClassName}
+                      className={({ isActive }) =>
+                        isActive
+                          ? "flex items-center gap-3 p-3 rounded-md bg-gray-100 text-primary font-medium shadow-sm"
+                          : "flex items-center gap-3 p-3 rounded-md text-gray-700 hover:bg-gray-50 hover:text-primary transition-all"
+                      }
                     >
                       <item.icon className="h-5 w-5 flex-shrink-0" />
                       {!isCollapsed && (
                         <div className="ml-3 flex-1">
                           <span className="block font-medium">{item.title}</span>
-                          <span className="block text-xs text-muted-foreground">
+                          <span className="block text-xs text-gray-500">
                             {item.description}
                           </span>
                         </div>

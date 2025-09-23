@@ -182,82 +182,16 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-extrabold text-gray-800">Dashboard</h1>
+          <p className="text-gray-600">
             Welcome back! Here's what's happening today.
           </p>
         </div>
-        <Dialog open={openNewAppointment} onOpenChange={setOpenNewAppointment}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary-hover">
-              <Plus className="w-4 h-4 mr-2" />
-              New Appointment
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>New Appointment</DialogTitle>
-            </DialogHeader>
-            <form className="space-y-4" onSubmit={handleSubmitNewAppointment}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="patientName">Patient Name</Label>
-                  <Input id="patientName" placeholder="e.g. Sarah Johnson" value={appointmentPatientName} onChange={(e) => setAppointmentPatientName(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="patientId">Patient ID</Label>
-                  <Input id="patientId" placeholder="e.g. 123" value={appointmentPatientId} onChange={(e) => setAppointmentPatientId(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="doctor">Doctor</Label>
-                  <Input id="doctor" placeholder="e.g. Dr. Ahmed" value={appointmentDoctor} onChange={(e) => setAppointmentDoctor(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="cabinet">Cabinet</Label>
-                  <Input id="cabinet" placeholder="e.g. C01" value={appointmentCabinet} onChange={(e) => setAppointmentCabinet(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" type="date" value={appointmentDate} onChange={(e) => setAppointmentDate(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="time">Time</Label>
-                  <Input id="time" type="time" value={appointmentTime} onChange={(e) => setAppointmentTime(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="duration">Duration</Label>
-                  <Select value={appointmentDuration} onValueChange={setAppointmentDuration}>
-                    <SelectTrigger id="duration">
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="15 min">15 minutes</SelectItem>
-                      <SelectItem value="30 min">30 minutes</SelectItem>
-                      <SelectItem value="45 min">45 minutes</SelectItem>
-                      <SelectItem value="60 min">60 minutes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="nature">Nature of care</Label>
-                  <Input id="nature" placeholder="e.g. Cleaning, Checkup" value={appointmentNature} onChange={(e) => setAppointmentNature(e.target.value)} />
-                </div>
-                <div className="sm:col-span-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea id="notes" placeholder="Additional observations..." value={appointmentNotes} onChange={(e) => setAppointmentNotes(e.target.value)} />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="outline" onClick={() => setOpenNewAppointment(false)}>Cancel</Button>
-                <Button type="submit">Save Appointment</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        {/* Removed New Appointment dialog/button as requested */}
       </div>
 
       {/* Stats Cards */}

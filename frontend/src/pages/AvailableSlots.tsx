@@ -18,16 +18,41 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { apiService } from "@/lib/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { usePatients } from "@/hooks/usePatients";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const AvailableSlots = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { patients, loading: loadingPatients } = usePatients();
   
   // State for filters
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [slotDuration, setSlotDuration] = useState<string>("30");
+
+  // Booking dialog state
+  const [openBook, setOpenBook] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [patientName, setPatientName] = useState("");
+  const [patientId, setPatientId] = useState("");
+  const [doctor, setDoctor] = useState("");
+  const [cabinet, setCabinet] = useState("");
+  const [duration, setDuration] = useState("");
+  const [nature, setNature] = useState("");
+  const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<'confirmed' | 'pending' | 'canceled'>("pending");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Get all appointments
   const { data: allAppointments, isLoading } = useQuery({
@@ -112,6 +137,46 @@ const AvailableSlots = () => {
     return !bookedSlots.includes(slot);
   };
 
+  const onClickSlot = (slot: string) => {
+    if (!isSlotAvailable(slot)) return;
+    setSelectedSlot(slot);
+    // prefill duration from sidebar selection
+    setDuration(slotDuration ? `${slotDuration} min` : "30 min");
+    setOpenBook(true);
+  };
+
+  const handleCreateAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDate || !selectedSlot || !patientId) {
+      toast({ title: "Missing info", description: "Please select an active patient, and ensure date and time are set." });
+      return;
+    }
+    try {
+      setIsSaving(true);
+      await apiService.createAppointment({
+        idPersonne: Number(patientId),
+        numCabinet: cabinet || null,
+        dateRdv: selectedDate,
+        heure: selectedSlot,
+        duree: duration || "30 min",
+        observation: notes || null,
+        nomPs: doctor || null,
+        natureSoin: nature || null,
+        nomPer: patientName || null,
+        status,
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast({ title: "Appointment booked", description: `${patientName} on ${selectedDate} at ${selectedSlot}` });
+      // reset minimal
+      setOpenBook(false);
+      setPatientName(""); setPatientId(""); setDoctor(""); setCabinet(""); setDuration(""); setNature(""); setNotes(""); setStatus('pending');
+    } catch (err: any) {
+      toast({ title: "Booking failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6">
@@ -123,186 +188,321 @@ const AvailableSlots = () => {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-foreground">Available Slots</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => handleDateChange('prev')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-lg font-medium text-foreground min-w-[200px] text-center">
-              {new Date(selectedDate).toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
-            </span>
-            <Button variant="outline" size="icon" onClick={() => handleDateChange('next')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+    <div className="min-h-screen p-6 space-y-6 bg-gradient-to-br from-green-50 to-white">
+      <div className="max-w-7xl mx-auto bg-white shadow-lg rounded-xl p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Available Slots</h1>
+              <p className="text-muted-foreground">View and manage available time slots for appointments</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-white rounded-lg border p-1 shadow-sm">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleDateChange('prev')}
+                  className="h-9 w-9 p-0 hover:bg-gray-100"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-center min-w-[180px]">
+                  <div className="text-sm font-medium text-gray-500">
+                    {new Date(selectedDate).toLocaleDateString('en-US', { 
+                      weekday: 'long',
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleDateChange('next')}
+                  className="h-9 w-9 p-0 hover:bg-gray-100"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-[150px]"
+                />
+                <Calendar className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-auto"
-          />
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Settings */}
-        <div className="space-y-6">
-          <Card className="border-0 shadow-soft">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-dental-blue" />
-                Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+          {/* Sidebar */}
+          <div className="space-y-6 xl:col-span-1">
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-dental-blue" />
+                  Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="duration">Slot Duration</Label>
+                  <Select value={slotDuration} onValueChange={setSlotDuration}>
+                    <SelectTrigger id="duration">
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">60 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Statistics */}
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-dental-accent" />
+                  Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Total Slots</span>
+                  <span className="font-medium text-foreground">{stats.totalSlots}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Available</span>
+                  <span className="font-medium text-green-600">{stats.availableCount}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Booked</span>
+                  <span className="font-medium text-red-600">{stats.bookedCount}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Utilization</span>
+                  <span className="font-medium text-dental-blue">{stats.utilizationRate}%</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Available Slots Grid */}
+          <div className="xl:col-span-4">
+            <Card className="border-0 shadow-soft overflow-hidden">
+              <CardHeader className="bg-gray-50 border-b">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                      <Calendar className="h-5 w-5 text-dental-blue" />
+                      Available Time Slots
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Showing slots for {new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2
+                  ">
+                    <div className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full">
+                      <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                      <span>Available: {stats.availableCount}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs bg-red-50 text-red-700 px-3 py-1.5 rounded-full">
+                      <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                      <span>Booked: {stats.bookedCount}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 p-4">
+                  {timeSlots.map((slot) => {
+                    const isAvailable = isSlotAvailable(slot);
+                    const isBooked = bookedSlots.includes(slot);
+                    
+                    return (
+                      <div
+                        key={slot}
+                        className={`group relative p-4 text-center rounded-xl border-2 transition-all duration-200 ${
+                          isAvailable 
+                            ? 'bg-white border-green-100 hover:border-green-300 hover:shadow-md cursor-pointer hover:-translate-y-0.5' 
+                            : 'bg-gray-50 border-gray-100 cursor-not-allowed opacity-70'
+                        }`}
+                        title={isAvailable ? `Book appointment at ${slot}` : 'This slot is already booked'}
+                        onClick={() => onClickSlot(slot)}
+                      >
+                        <div className={`text-lg font-semibold mb-1 ${
+                          isAvailable ? 'text-gray-900' : 'text-gray-500'
+                        }`}>
+                          {slot}
+                        </div>
+                        
+                        <div className="absolute top-2 right-2">
+                          <div className={`h-2.5 w-2.5 rounded-full ${
+                            isAvailable ? 'bg-green-400' : 'bg-gray-300'
+                          }`}></div>
+                        </div>
+                        
+                        <div className="mt-2">
+                          {isAvailable ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-100">
+                              Available
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                              Booked
+                            </span>
+                          )}
+                        </div>
+                        
+                        {isAvailable && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 rounded-lg transition-opacity">
+                            <span className="bg-white px-3 py-1 rounded-full text-xs font-medium text-gray-700 shadow-sm">
+                              Click to book
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <Card className="border-0 shadow-soft">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
+                <span className="text-muted-foreground">Available slots</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
+                <span className="text-muted-foreground">Booked slots</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Click on available slots to book</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      {/* Booking Dialog */}
+      <Dialog open={openBook} onOpenChange={setOpenBook}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>Book Appointment</DialogTitle>
+          </DialogHeader>
+          <form className="space-y-4" onSubmit={handleCreateAppointment}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="duration">Slot Duration</Label>
-                <Select value={slotDuration} onValueChange={setSlotDuration}>
+                <Label>Date</Label>
+                <Input value={selectedDate} readOnly className="bg-muted" />
+              </div>
+              <div>
+                <Label>Time</Label>
+                <Input value={selectedSlot} readOnly className="bg-muted" />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="patient">Patient (active only)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" className="w-full justify-between">
+                      {patientId
+                        ? `${patients.find(p => p.id.toString() === patientId)?.name || "Unknown"} (${patientId})`
+                        : (loadingPatients ? "Loading patients..." : "Select patient")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                    <Command>
+                      <CommandInput placeholder="Search patients..." />
+                      <CommandEmpty>No patient found.</CommandEmpty>
+                      <CommandList>
+                        <CommandGroup heading="Active Patients">
+                          {patients.filter(p => p.status === 'active').map(p => (
+                            <CommandItem
+                              key={p.id}
+                              value={`${p.name} ${p.id}`}
+                              onSelect={() => {
+                                setPatientId(p.id.toString());
+                                setPatientName(p.name);
+                              }}
+                            >
+                              {p.name} ({p.id})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label htmlFor="doctor">Doctor</Label>
+                <Input id="doctor" value={doctor} onChange={(e) => setDoctor(e.target.value)} placeholder="e.g. Dr. Ahmed" />
+              </div>
+              <div>
+                <Label htmlFor="cabinet">Cabinet</Label>
+                <Input id="cabinet" value={cabinet} onChange={(e) => setCabinet(e.target.value)} placeholder="e.g. C01" />
+              </div>
+              <div>
+                <Label htmlFor="duration">Duration</Label>
+                <Select value={duration} onValueChange={setDuration}>
                   <SelectTrigger id="duration">
                     <SelectValue placeholder="Select duration" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="15">15 minutes</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="45">45 minutes</SelectItem>
-                    <SelectItem value="60">60 minutes</SelectItem>
+                    <SelectItem value="15 min">15 minutes</SelectItem>
+                    <SelectItem value="30 min">30 minutes</SelectItem>
+                    <SelectItem value="45 min">45 minutes</SelectItem>
+                    <SelectItem value="60 min">60 minutes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Statistics */}
-          <Card className="border-0 shadow-soft">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-dental-accent" />
-                Statistics
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Total Slots</span>
-                <span className="font-medium text-foreground">{stats.totalSlots}</span>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={status} onValueChange={(v: 'confirmed' | 'pending' | 'canceled') => setStatus(v)}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="canceled">Canceled</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Available</span>
-                <span className="font-medium text-green-600">{stats.availableCount}</span>
+              <div className="sm:col-span-2">
+                <Label htmlFor="nature">Nature of care</Label>
+                <Input id="nature" value={nature} onChange={(e) => setNature(e.target.value)} placeholder="e.g. Cleaning, Checkup" />
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Booked</span>
-                <span className="font-medium text-red-600">{stats.bookedCount}</span>
+              <div className="sm:col-span-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Additional observations..." rows={3} />
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Utilization</span>
-                <span className="font-medium text-dental-blue">{stats.utilizationRate}%</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Available Slots Grid */}
-        <div className="lg:col-span-3">
-          <Card className="border-0 shadow-soft">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-dental-blue" />
-                Available Time Slots
-              </CardTitle>
-              <div className="text-xs text-muted-foreground">
-                Duration: {slotDuration} min | Date: {selectedDate}
-                <br />
-                Debug: Booked slots: {bookedSlots.join(", ") || "None"}
-                <br />
-                Total appointments: {allAppointments?.length || 0}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
-                {timeSlots.map((slot) => {
-                  const isAvailable = isSlotAvailable(slot);
-                  const isBooked = bookedSlots.includes(slot);
-                  
-                  return (
-                    <div
-                      key={slot}
-                      className={`p-3 text-center text-sm rounded-md border transition-colors ${
-                        isAvailable 
-                          ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100 cursor-pointer' 
-                          : 'bg-red-50 border-red-200 text-red-800 cursor-not-allowed hover:bg-red-100'
-                      }`}
-                      style={{
-                        backgroundColor: isAvailable ? '#f0fdf4' : '#fef2f2',
-                        borderColor: isAvailable ? '#bbf7d0' : '#fecaca',
-                        color: isAvailable ? '#166534' : '#991b1b'
-                      }}
-                      title={`${slot} - ${isAvailable ? 'Available' : 'Booked'} (Debug: ${isBooked ? 'Found in bookedSlots' : 'Not in bookedSlots'})`}
-                    >
-                      <div className="font-medium">{slot}</div>
-                      <div className="text-xs mt-1">
-                        {isAvailable ? (
-                          <span 
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
-                            style={{ 
-                              color: '#166534', 
-                              borderColor: '#bbf7d0', 
-                              backgroundColor: '#f0fdf4' 
-                            }}
-                          >
-                            Available
-                          </span>
-                        ) : (
-                          <span 
-                            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border"
-                            style={{ 
-                              color: '#991b1b !important', 
-                              borderColor: '#fecaca !important', 
-                              backgroundColor: '#fef2f2 !important' 
-                            }}
-                          >
-                            Booked
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Legend */}
-      <Card className="border-0 shadow-soft">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-50 border border-green-200 rounded"></div>
-              <span className="text-muted-foreground">Available slots</span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-red-50 border border-red-200 rounded"></div>
-              <span className="text-muted-foreground">Booked slots</span>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpenBook(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSaving}>Book</Button>
             </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Click on available slots to book</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

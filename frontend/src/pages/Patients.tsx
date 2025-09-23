@@ -242,25 +242,25 @@ const Patients = () => {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gradient-to-br from-purple-50 to-white">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Patients</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-extrabold text-purple-800">Patients</h1>
+          <p className="text-gray-600">
             Manage and view all patients
           </p>
         </div>
         <Dialog open={openNewPatient} onOpenChange={setOpenNewPatient}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary-hover">
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">
               <Plus className="w-4 h-4 mr-2" />
               New Patient
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>New Patient</DialogTitle>
+              <DialogTitle className="text-purple-800">New Patient</DialogTitle>
             </DialogHeader>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -339,7 +339,7 @@ const Patients = () => {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={() => setOpenNewPatient(false)}>Cancel</Button>
-                <Button type="submit">Save Patient</Button>
+                <Button type="submit" className="bg-purple-600 hover:bg-purple-700 text-white">Save Patient</Button>
               </div>
             </form>
           </DialogContent>
@@ -569,4 +569,4 @@ const Patients = () => {
   );
 };
 
-export default Patients; 
+export default Patients;

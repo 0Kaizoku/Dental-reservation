@@ -40,6 +40,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAppointments } from "@/hooks/useAppointments";
 import { apiService, RdvPatient } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePatients } from "@/hooks/usePatients";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const toUiItem = (r: RdvPatient) => ({
   id: r.numRdv ?? Date.now(),
@@ -49,7 +52,7 @@ const toUiItem = (r: RdvPatient) => ({
   date: r.dateRdv ? String(r.dateRdv).slice(0, 10) : "",
   time: r.heure || "",
   type: r.natureSoin || "",
-  status: "confirmed",
+  status: (r.status as 'confirmed' | 'pending' | 'canceled' | undefined) || 'pending',
   duration: r.duree || "",
   phone: "",
   numRdv: r.numRdv,
@@ -61,6 +64,7 @@ const Appointments = () => {
   const { toast } = useToast();
   const { addAppointment } = useAppointments();
   const queryClient = useQueryClient();
+  const { patients, loading: loadingPatients } = usePatients();
 
   // Backend data
   const { data: rdvs, isLoading } = useQuery({
@@ -79,6 +83,7 @@ const Appointments = () => {
   const [duration, setDuration] = useState("");
   const [nature, setNature] = useState("");
   const [notes, setNotes] = useState("");
+  const [status, setStatus] = useState<'confirmed' | 'pending' | 'canceled'>("pending");
 
   // Edit modal state
   const [openEdit, setOpenEdit] = useState(false);
@@ -127,12 +132,12 @@ const Appointments = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !time || !patientName) {
-      toast({ title: "Missing info", description: "Please fill at least patient, date and time." });
+    if (!date || !time || !patientId) {
+      toast({ title: "Missing info", description: "Please select an active patient, and fill date and time." });
       return;
     }
     const payload: RdvPatient = {
-      idPersonne: patientId ? Number(patientId) : undefined,
+      idPersonne: Number(patientId),
       numCabinet: cabinet || null,
       dateRdv: date,
       heure: time,
@@ -141,6 +146,7 @@ const Appointments = () => {
       nomPs: doctor || null,
       natureSoin: nature || null,
       nomPer: patientName || null,
+      status,
     };
     createMutation.mutate(payload);
   };
@@ -168,10 +174,9 @@ const Appointments = () => {
     const variants = {
       confirmed: "bg-green-100 text-green-800 border-green-200",
       pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      completed: "bg-blue-100 text-blue-800 border-blue-200",
-      cancelled: "bg-red-100 text-red-800 border-red-200"
+      canceled: "bg-red-100 text-red-800 border-red-200",
     };
-    return variants[status as keyof typeof variants] || variants.pending;
+    return variants[(status as keyof typeof variants)] || variants.pending;
   };
 
   const uiAppointments = useMemo(() => (rdvs || []).map(toUiItem), [rdvs]);
@@ -187,35 +192,61 @@ const Appointments = () => {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gradient-to-br from-blue-50 to-white">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Appointments</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-extrabold text-blue-800">Appointments</h1>
+          <p className="text-gray-600">
             Manage and view all patient appointments
           </p>
         </div>
         <Dialog open={openNewAppointment} onOpenChange={setOpenNewAppointment}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary-hover">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold">
               <Plus className="w-4 h-4 mr-2" />
               New Appointment
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>New Appointment</DialogTitle>
+              <DialogTitle className="text-blue-800">New Appointment</DialogTitle>
             </DialogHeader>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="patientName">Patient Name</Label>
-                  <Input id="patientName" placeholder="e.g. Sarah Johnson" value={patientName} onChange={(e) => setPatientName(e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="patientId">Patient ID</Label>
-                  <Input id="patientId" placeholder="e.g. 123" value={patientId} onChange={(e) => setPatientId(e.target.value)} />
+                <div className="sm:col-span-2">
+                  <Label htmlFor="patient">Patient (active only)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" className="w-full justify-between">
+                        {patientId
+                          ? `${patients.find(p => p.id.toString() === patientId)?.name || "Unknown"} (${patientId})`
+                          : (loadingPatients ? "Loading patients..." : "Select patient")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                      <Command>
+                        <CommandInput placeholder="Search patients..." />
+                        <CommandEmpty>No patient found.</CommandEmpty>
+                        <CommandList>
+                          <CommandGroup heading="Active Patients">
+                            {patients.filter(p => p.status === 'active').map(p => (
+                              <CommandItem
+                                key={p.id}
+                                value={`${p.name} ${p.id}`}
+                                onSelect={() => {
+                                  setPatientId(p.id.toString());
+                                  setPatientName(p.name);
+                                }}
+                              >
+                                {p.name} ({p.id})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label htmlFor="doctor">Doctor</Label>
@@ -248,6 +279,19 @@ const Appointments = () => {
                   </Select>
                 </div>
                 <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={status} onValueChange={(v: 'confirmed' | 'pending' | 'canceled') => setStatus(v)}>
+                    <SelectTrigger id="status">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="canceled">Canceled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label htmlFor="nature">Nature of care</Label>
                   <Input id="nature" placeholder="e.g. Cleaning, Checkup" value={nature} onChange={(e) => setNature(e.target.value)} />
                 </div>
@@ -258,7 +302,7 @@ const Appointments = () => {
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button type="button" variant="outline" onClick={() => setOpenNewAppointment(false)}>Cancel</Button>
-                <Button type="submit" disabled={createMutation.isPending}>Save Appointment</Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">Save Appointment</Button>
               </div>
             </form>
           </DialogContent>
@@ -290,8 +334,7 @@ const Appointments = () => {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
+                <SelectItem value="canceled">Canceled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -415,13 +458,36 @@ const Appointments = () => {
           {editing && (
             <form className="space-y-4" onSubmit={submitEdit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label>Patient Name</Label>
-                  <Input value={editing.nomPer || ""} onChange={(e) => setEditing({ ...editing, nomPer: e.target.value })} />
-                </div>
-                <div>
-                  <Label>Patient ID</Label>
-                  <Input value={editing.idPersonne?.toString() || ""} onChange={(e) => setEditing({ ...editing, idPersonne: e.target.value ? Number(e.target.value) : undefined })} />
+                <div className="sm:col-span-2">
+                  <Label>Patient (active only)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" className="w-full justify-between">
+                        {editing.idPersonne
+                          ? `${patients.find(p => p.id === editing.idPersonne)?.name || editing.nomPer || "Unknown"} (${editing.idPersonne})`
+                          : (loadingPatients ? "Loading patients..." : "Select patient")}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                      <Command>
+                        <CommandInput placeholder="Search patients..." />
+                        <CommandEmpty>No patient found.</CommandEmpty>
+                        <CommandList>
+                          <CommandGroup heading="Active Patients">
+                            {patients.filter(p => p.status === 'active').map(p => (
+                              <CommandItem
+                                key={p.id}
+                                value={`${p.name} ${p.id}`}
+                                onSelect={() => setEditing({ ...editing!, idPersonne: p.id, nomPer: p.name })}
+                              >
+                                {p.name} ({p.id})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <Label>Doctor</Label>
@@ -446,6 +512,19 @@ const Appointments = () => {
                 <div>
                   <Label>Type</Label>
                   <Input value={editing.natureSoin || ""} onChange={(e) => setEditing({ ...editing, natureSoin: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Select value={(editing.status as any) || 'pending'} onValueChange={(v: 'confirmed' | 'pending' | 'canceled') => setEditing({ ...editing!, status: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="canceled">Canceled</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="sm:col-span-2">
                   <Label>Notes</Label>

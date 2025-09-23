@@ -40,5 +40,9 @@ namespace Dental_reservation.api.Models
         public string? Agent { get; set; }
         [Column("nom_assure")]
         public string? NomAssure { get; set; }
+
+        // Appointment status: "confirmed", "pending", or "canceled"
+        [Column("status")]
+        public string? Status { get; set; }
     }
-} 
+}

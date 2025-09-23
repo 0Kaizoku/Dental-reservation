@@ -43,6 +43,7 @@ export interface RdvPatient {
   collectivitePe?: string | null;
   agent?: string | null;
   nomAssure?: string | null;
+  status?: 'confirmed' | 'pending' | 'canceled' | null;
 }
 
 class ApiService {

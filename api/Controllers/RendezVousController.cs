@@ -40,17 +40,31 @@ namespace Dental_reservation.api.Controllers
             {
                 Console.WriteLine($"=== Creating Appointment ===");
                 Console.WriteLine($"Received data: Date={newRdv.DateRdv}, Time={newRdv.Heure}, Doctor={newRdv.NomPs}");
-                
+
                 if (newRdv.DateRdv == null || string.IsNullOrWhiteSpace(newRdv.Heure))
                     return BadRequest("Date and time are required.");
 
                 // Test database connection first
                 var canConnect = await _context.Database.CanConnectAsync();
                 Console.WriteLine($"Database connection status: {canConnect}");
-                
                 if (!canConnect)
                 {
                     return StatusCode(500, "Cannot connect to database");
+                }
+
+                // Normalize and validate status
+                var allowedStatuses = new[] { "confirmed", "pending", "canceled" };
+                if (string.IsNullOrWhiteSpace(newRdv.Status))
+                {
+                    newRdv.Status = "pending";
+                }
+                else
+                {
+                    newRdv.Status = newRdv.Status!.Trim().ToLowerInvariant();
+                    if (!allowedStatuses.Contains(newRdv.Status))
+                    {
+                        return BadRequest("Invalid status. Allowed values are: confirmed, pending, canceled.");
+                    }
                 }
 
                 bool doctorConflict = false;
@@ -61,7 +75,8 @@ namespace Dental_reservation.api.Controllers
                     doctorConflict = await _context.RdvPatients.AnyAsync(r =>
                         r.NomPs == newRdv.NomPs &&
                         r.DateRdv == newRdv.DateRdv &&
-                        r.Heure == newRdv.Heure);
+                        r.Heure == newRdv.Heure &&
+                        r.Status != "canceled");
                 }
 
                 if (!string.IsNullOrWhiteSpace(newRdv.NumCabinet))
@@ -69,34 +84,24 @@ namespace Dental_reservation.api.Controllers
                     cabinetConflict = await _context.RdvPatients.AnyAsync(r =>
                         r.NumCabinet == newRdv.NumCabinet &&
                         r.DateRdv == newRdv.DateRdv &&
-                        r.Heure == newRdv.Heure);
+                        r.Heure == newRdv.Heure &&
+                        r.Status != "canceled");
                 }
 
                 if (doctorConflict)
                     return Conflict("Doctor already has an appointment at this time.");
-
                 if (cabinetConflict)
                     return Conflict("Cabinet is already booked at this time.");
 
-                Console.WriteLine($"Adding appointment to context...");
                 _context.RdvPatients.Add(newRdv);
-                
-                Console.WriteLine($"Saving changes to database...");
                 var result = await _context.SaveChangesAsync();
-
-                // Log the result for debugging
                 Console.WriteLine($"SaveChanges result: {result} rows affected");
                 Console.WriteLine($"New appointment ID: {newRdv.NumRdv}");
-                
-                // Verify the appointment was actually saved
-                var savedAppointment = await _context.RdvPatients.FirstOrDefaultAsync(r => r.NumRdv == newRdv.NumRdv);
-                Console.WriteLine($"Verification - Found saved appointment: {savedAppointment != null}");
 
-                return Ok(newRdv);  
+                return Ok(newRdv);
             }
             catch (Exception ex)
             {
-                // Log the exception for debugging
                 Console.WriteLine($"Error creating appointment: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return StatusCode(500, $"Internal server error: {ex.Message}");
@@ -113,7 +118,17 @@ namespace Dental_reservation.api.Controllers
             if (updatedRdv.DateRdv == null || string.IsNullOrWhiteSpace(updatedRdv.Heure))
                 return BadRequest("Date and time are required.");
 
-            // Check for conflicts only when respective fields provided (excluding this appointment)
+            // Normalize and validate status
+            var allowedStatuses = new[] { "confirmed", "pending", "canceled" };
+            if (!string.IsNullOrWhiteSpace(updatedRdv.Status))
+            {
+                updatedRdv.Status = updatedRdv.Status!.Trim().ToLowerInvariant();
+                if (!allowedStatuses.Contains(updatedRdv.Status))
+                {
+                    return BadRequest("Invalid status. Allowed values are: confirmed, pending, canceled.");
+                }
+            }
+
             bool doctorConflict = false;
             bool cabinetConflict = false;
 
@@ -123,7 +138,8 @@ namespace Dental_reservation.api.Controllers
                     r.NumRdv != num_rdv &&
                     r.NomPs == updatedRdv.NomPs &&
                     r.DateRdv == updatedRdv.DateRdv &&
-                    r.Heure == updatedRdv.Heure);
+                    r.Heure == updatedRdv.Heure &&
+                    r.Status != "canceled");
             }
 
             if (!string.IsNullOrWhiteSpace(updatedRdv.NumCabinet))
@@ -132,7 +148,8 @@ namespace Dental_reservation.api.Controllers
                     r.NumRdv != num_rdv &&
                     r.NumCabinet == updatedRdv.NumCabinet &&
                     r.DateRdv == updatedRdv.DateRdv &&
-                    r.Heure == updatedRdv.Heure);
+                    r.Heure == updatedRdv.Heure &&
+                    r.Status != "canceled");
             }
 
             if (doctorConflict)
@@ -155,6 +172,10 @@ namespace Dental_reservation.api.Controllers
             rdv.CollectivitePe = updatedRdv.CollectivitePe;
             rdv.Agent = updatedRdv.Agent;
             rdv.NomAssure = updatedRdv.NomAssure;
+            if (!string.IsNullOrWhiteSpace(updatedRdv.Status))
+            {
+                rdv.Status = updatedRdv.Status;
+            }
 
             await _context.SaveChangesAsync();
             return Ok(rdv);
@@ -176,9 +197,9 @@ namespace Dental_reservation.api.Controllers
         {
             var query = _context.RdvPatients.AsQueryable();
             if (!string.IsNullOrEmpty(patient))
-                query = query.Where(r => r.NomPer.Contains(patient));
+                query = query.Where(r => r.NomPer != null && r.NomPer.Contains(patient));
             if (!string.IsNullOrEmpty(doctor))
-                query = query.Where(r => r.NomPs.Contains(doctor));
+                query = query.Where(r => r.NomPs != null && r.NomPs.Contains(doctor));
             if (date.HasValue)
                 query = query.Where(r => r.DateRdv.HasValue && r.DateRdv.Value.Date == date.Value.Date);
             var rdvs = await query.ToListAsync();
@@ -197,32 +218,27 @@ namespace Dental_reservation.api.Controllers
         [HttpGet("available-slots")]
         public async Task<IActionResult> GetAvailableSlots([FromQuery] string doctor, [FromQuery] string cabinet, [FromQuery] DateTime date)
         {
-            // Define your working hours and slot duration (8:00 to 17:30)
             var startHour = 8;
             var endHour = 17;
-            var slotMinutes = 30;
             var slots = new List<string>();
 
             for (var hour = startHour; hour <= endHour; hour++)
             {
                 slots.Add($"{hour:D2}:00");
                 slots.Add($"{hour:D2}:30");
-                
-                // Stop at 17:30
                 if (hour == 17) break;
             }
 
-            // Get all booked slots for this doctor or cabinet on this date
             var bookedSlots = await _context.RdvPatients
                 .Where(r =>
                     r.DateRdv.HasValue &&
                     r.DateRdv.Value.Date == date.Date &&
-                    (r.NomPs == doctor || r.NumCabinet == cabinet))
+                    (r.NomPs == doctor || r.NumCabinet == cabinet) &&
+                    r.Status != "canceled")
                 .Select(r => r.Heure)
                 .ToListAsync();
 
-            // Remove booked slots
-            var availableSlots = slots.Except(bookedSlots).ToList();
+            var availableSlots = slots.Except(bookedSlots.Where(h => h != null)!.Select(h => h!)).ToList();
 
             return Ok(availableSlots);
         }
@@ -234,16 +250,11 @@ namespace Dental_reservation.api.Controllers
             {
                 var allAppointments = await _context.RdvPatients.ToListAsync();
                 Console.WriteLine($"Total appointments in database: {allAppointments.Count}");
-                
                 foreach (var appointment in allAppointments)
                 {
                     Console.WriteLine($"Appointment ID: {appointment.NumRdv}, Date: {appointment.DateRdv}, Time: {appointment.Heure}, Doctor: {appointment.NomPs}");
                 }
-                
-                return Ok(new { 
-                    count = allAppointments.Count, 
-                    appointments = allAppointments 
-                });
+                return Ok(new { count = allAppointments.Count, appointments = allAppointments });
             }
             catch (Exception ex)
             {
@@ -260,17 +271,8 @@ namespace Dental_reservation.api.Controllers
                 var canConnect = await _context.Database.CanConnectAsync();
                 var connectionString = _context.Database.GetConnectionString();
                 var databaseName = _context.Database.GetDbConnection().Database;
-                
-                // Get table info
                 var tableExists = await _context.Database.ExecuteSqlRawAsync("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'tab_RDV_patient'") >= 0;
-                
-                return Ok(new {
-                    canConnect,
-                    databaseName,
-                    connectionString = connectionString?.Substring(0, Math.Min(50, connectionString.Length)) + "...", // Truncate for security
-                    tableExists,
-                    tableName = "tab_RDV_patient"
-                });
+                return Ok(new { canConnect, databaseName, connectionString = connectionString?.Substring(0, Math.Min(50, connectionString.Length)) + "...", tableExists, tableName = "tab_RDV_patient" });
             }
             catch (Exception ex)
             {
@@ -292,19 +294,14 @@ namespace Dental_reservation.api.Controllers
                     NomPer = "Test Patient",
                     NatureSoin = "Test Appointment",
                     Duree = "30 min",
-                    Observation = "This is a test appointment"
+                    Observation = "This is a test appointment",
+                    Status = "pending"
                 };
 
                 _context.RdvPatients.Add(testAppointment);
                 var result = await _context.SaveChangesAsync();
-
                 Console.WriteLine($"Test appointment created with ID: {testAppointment.NumRdv}");
-
-                return Ok(new { 
-                    message = "Test appointment created successfully",
-                    appointmentId = testAppointment.NumRdv,
-                    rowsAffected = result
-                });
+                return Ok(new { message = "Test appointment created successfully", appointmentId = testAppointment.NumRdv, rowsAffected = result });
             }
             catch (Exception ex)
             {
@@ -313,4 +310,4 @@ namespace Dental_reservation.api.Controllers
             }
         }
     }
-} 
+}
