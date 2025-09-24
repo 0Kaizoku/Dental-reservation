@@ -132,7 +132,24 @@ const Patients = () => {
   };
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number, payload: { firstName?: string; lastName?: string; dateOfBirth?: string; gender?: string; cin?: string; matricule?: string; } }) =>
+    mutationFn: ({ id, payload }: { id: number, payload: {
+      firstName?: string;
+      lastName?: string;
+      dateOfBirth?: string;
+      gender?: string;
+      cin?: string;
+      matricule?: string;
+      codeCivilitePer?: string;
+      idNumFamillePer?: number;
+      codeQualitePersonnePer?: string;
+      codeStatutPer?: string;
+      codeSituationFamilialePer?: string;
+      idNumAdressePer?: number;
+      codeCollectivitePer?: string;
+      autorisation?: string;
+      email?: string;
+      phone?: string;
+    } }) =>
       apiService.updatePatient(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });
@@ -233,10 +250,13 @@ const Patients = () => {
   };
 
   const filteredPatients = patients.filter(patient => {
+    const name = (patient.name || "").toLowerCase();
+    const phone = (patient.phone || "").toLowerCase();
+    const email = (patient.email || "").toLowerCase();
     const matchesSearch =
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.email.toLowerCase().includes(searchTerm.toLowerCase());
+      name.includes(searchTerm.toLowerCase()) ||
+      phone.includes(searchTerm.toLowerCase()) ||
+      email.includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || patient.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
