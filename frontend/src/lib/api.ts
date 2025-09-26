@@ -84,10 +84,11 @@ class ApiService {
   }
 
   // Patients
-  async getPatients(name?: string, status?: string): Promise<Patient[]> {
+  async getPatients(name?: string, status?: string, matricule?: string): Promise<Patient[]> {
     const params = new URLSearchParams();
     if (name) params.append('name', name);
     if (status) params.append('status', status);
+    if (matricule) params.append('matricule', matricule);
 
     const response = await fetch(`${API_BASE_URL}/Patients?${params}`, {
       headers: this.getAuthHeaders(),

@@ -44,6 +44,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 const Patients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [matriculeFilter, setMatriculeFilter] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -213,8 +214,12 @@ const Patients = () => {
 
   // Backend data
   const { data: serverPatients, isLoading } = useQuery({
-    queryKey: ["patients", { name: searchTerm, status: statusFilter }],
-    queryFn: () => apiService.getPatients(searchTerm || undefined, statusFilter === "all" ? undefined : statusFilter),
+    queryKey: ["patients", { name: searchTerm, status: statusFilter, matricule: matriculeFilter }],
+    queryFn: () => apiService.getPatients(
+      searchTerm || undefined,
+      statusFilter === "all" ? undefined : statusFilter,
+      matriculeFilter || undefined
+    ),
   });
 
   // Map server patients to UI with computed age
@@ -369,7 +374,7 @@ const Patients = () => {
       {/* Filters and Search */}
       <Card className="border-0 shadow-soft">
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col xl:flex-row gap-4">
             {/* Search */}
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -378,6 +383,15 @@ const Patients = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+              />
+            </div>
+
+            {/* Matricule Filter */}
+            <div className="w-full sm:w-[240px]">
+              <Input
+                placeholder="Search by matricule"
+                value={matriculeFilter}
+                onChange={(e) => setMatriculeFilter(e.target.value)}
               />
             </div>
 
