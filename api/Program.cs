@@ -76,7 +76,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Redirect HTTP to HTTPS for local runs (matches launchSettings profiles)
+var enableHttpsRedirection = builder.Configuration.GetValue<bool>("EnableHttpsRedirection", true);
+
+if (enableHttpsRedirection)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(policy => policy
     .AllowAnyOrigin()

@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: dental-reservation-api:latest
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      # Provide your own values via a .env file or CI secrets
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+    ports:
+      - "5057:8080"
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: dental-reservation-web:latest
+    depends_on:
+      - api
+    environment:
+      # If you prefer building the frontend with a full URL instead of using nginx proxy,
+      # you can pass VITE_API_BASE_URL at build time. Current setup proxies /api to the api service.
+      # VITE_API_BASE_URL: http://localhost:5057/api
+      # Keep runtime simple; nginx proxies /api/* to http://api:8080/api/*
+       NODE_ENV : production
+       EnableHttpsRedirection: "false"
+    ports:
+      - "8081:80"

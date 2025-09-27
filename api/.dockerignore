@@ -1,0 +1,20 @@
+bin/
+obj/
+**/*.user
+**/*.suo
+**/*.csproj.user
+**/*.pidb
+**/*.svclog
+**/*.userprefs
+
+# IDEs
+.vscode/
+.vs/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
