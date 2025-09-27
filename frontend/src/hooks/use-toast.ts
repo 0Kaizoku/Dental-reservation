@@ -5,7 +5,7 @@ import type {
   ToastProps,
 } from "@/components/ui/toast"
 
-const TOAST_LIMIT = 1
+const TOAST_LIMIT = 3
 const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = ToastProps & {
@@ -189,3 +189,42 @@ function useToast() {
 }
 
 export { useToast, toast }
+
+// Notification history support: record all toasts for a notifications panel
+type LoggedToast = ToasterToast & { createdAt: number }
+const historyListeners: Array<(items: LoggedToast[]) => void> = []
+let historyItems: LoggedToast[] = []
+
+// Wrap original dispatch to also populate history on ADD_TOAST
+const originalDispatch = dispatch
+// @ts-expect-error reassigning for history tap-in
+dispatch = function (action: Action) {
+  if (action.type === "ADD_TOAST") {
+    historyItems = [
+      { ...(action.toast as ToasterToast), createdAt: Date.now() },
+      ...historyItems,
+    ]
+    // keep reasonable size
+    if (historyItems.length > 100) historyItems = historyItems.slice(0, 100)
+    historyListeners.forEach((l) => l(historyItems))
+  }
+  originalDispatch(action)
+}
+
+export function useToastNotifications() {
+  const [items, setItems] = React.useState<LoggedToast[]>(historyItems)
+  React.useEffect(() => {
+    historyListeners.push(setItems)
+    return () => {
+      const idx = historyListeners.indexOf(setItems)
+      if (idx > -1) historyListeners.splice(idx, 1)
+    }
+  }, [])
+
+  const clear = React.useCallback(() => {
+    historyItems = []
+    historyListeners.forEach((l) => l(historyItems))
+  }, [])
+
+  return { notifications: items, clear }
+}

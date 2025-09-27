@@ -6,13 +6,14 @@ using Microsoft.EntityFrameworkCore;
 namespace Dental_reservation.api.Models
 {
     [Table("tab_RDV_patient")]
-    [Keyless]
     public class RdvPatient
     {
+        [Key]
         [Column("num_rdv")]
-        public double? NumRdv { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int NumRdv { get; set; }
         [Column("id_personne")]
-        public double? IdPersonne { get; set; }
+        public int? IdPersonne { get; set; }
         [Column("num_cabinet")]
         public string? NumCabinet { get; set; }
         [Column("date_rdv")]
@@ -39,5 +40,9 @@ namespace Dental_reservation.api.Models
         public string? Agent { get; set; }
         [Column("nom_assure")]
         public string? NomAssure { get; set; }
+
+        // Appointment status: "confirmed", "pending", or "canceled"
+        [Column("status")]
+        public string? Status { get; set; }
     }
-} 
+}

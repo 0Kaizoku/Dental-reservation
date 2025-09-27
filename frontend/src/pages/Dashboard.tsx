@@ -1,30 +1,131 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Users, 
-  Clock, 
-  CalendarCheck, 
+import {
+  Calendar,
+  Users,
+  Clock,
+  CalendarCheck,
   TrendingUp,
-  Plus 
+  Plus
 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { useAppointments } from "@/hooks/useAppointments";
+import { apiService } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const Dashboard = () => {
-  // Mock data - replace with real API calls
+  const { toast } = useToast();
+  const { addAppointment } = useAppointments();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // UI state for dialogs
+  const [openNewAppointment, setOpenNewAppointment] = useState(false);
+
+  // New Appointment form state
+  const [appointmentPatientId, setAppointmentPatientId] = useState("");
+  const [appointmentPatientName, setAppointmentPatientName] = useState("");
+  const [appointmentDoctor, setAppointmentDoctor] = useState("");
+  const [appointmentCabinet, setAppointmentCabinet] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
+  const [appointmentDuration, setAppointmentDuration] = useState("");
+  const [appointmentNature, setAppointmentNature] = useState("");
+  const [appointmentNotes, setAppointmentNotes] = useState("");
+
+  // Real data via API
+  const today = useMemo(() => new Date().toISOString().slice(0,10), []);
+
+  const { data: patientStats } = useQuery({
+    queryKey: ["patient-stats"],
+    queryFn: () => apiService.getPatientStats(),
+  });
+
+  const { data: allAppointments } = useQuery({
+    queryKey: ["appointments", { scope: "all" }],
+    queryFn: () => apiService.getAppointments(),
+  });
+
+  // Calculate today's appointments from all appointments
+  const todaysAppointments = useMemo(() => {
+    if (!allAppointments) return [];
+    
+    const todayYmd = new Date().toISOString().slice(0, 10);
+    return allAppointments.filter(appointment => {
+      if (!appointment.dateRdv) return false;
+      
+      // Handle different date formats
+      let appointmentDate = "";
+      if (typeof appointment.dateRdv === 'string') {
+        appointmentDate = appointment.dateRdv.slice(0, 10);
+      } else {
+        appointmentDate = new Date(appointment.dateRdv).toISOString().slice(0, 10);
+      }
+      
+      return appointmentDate === todayYmd;
+    });
+  }, [allAppointments]);
+
+  // Calculate available slots for today
+  const availableSlotsToday = useMemo(() => {
+    // Generate time slots for today (8 AM to 5:30 PM, 30-minute intervals)
+    const timeSlots: string[] = [];
+    for (let hour = 8; hour <= 17; hour++) {
+      for (let minutes = 0; minutes < 60; minutes += 30) {
+        // Skip 17:30 and beyond
+        if (hour === 17 && minutes > 30) break;
+        
+        const timeString = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        timeSlots.push(timeString);
+      }
+    }
+    
+    // Get booked slots for today
+    const bookedSlots = todaysAppointments
+      .map(appointment => appointment.heure)
+      .filter(Boolean)
+      .map(time => time?.slice(0, 5) || "");
+    
+    // Calculate available slots
+    const totalSlots = timeSlots.length;
+    const bookedCount = bookedSlots.length;
+    const availableCount = totalSlots - bookedCount;
+    
+    return {
+      total: totalSlots,
+      available: availableCount,
+      booked: bookedCount
+    };
+  }, [todaysAppointments]);
+
   const stats = {
-    totalAppointments: 248,
-    todayAppointments: 12,
-    totalPatients: 156,
-    availableSlots: 24
+    totalAppointments: allAppointments?.length || 0,
+    todayAppointments: todaysAppointments.length,
+    totalPatients: patientStats?.total || 0,
+    availableSlots: availableSlotsToday.available,
   };
 
-  const recentAppointments = [
-    { id: 1, patient: "Sarah Johnson", time: "09:00", type: "Cleaning", status: "confirmed" },
-    { id: 2, patient: "Mike Wilson", time: "10:30", type: "Checkup", status: "pending" },
-    { id: 3, patient: "Emma Davis", time: "14:00", type: "Root Canal", status: "confirmed" },
-    { id: 4, patient: "John Smith", time: "15:30", type: "Filling", status: "completed" },
-  ];
+  const recentAppointments = todaysAppointments.slice(0, 6).map((r, idx) => ({
+    id: r.numRdv ?? idx,
+    patient: r.nomPer || "",
+    time: r.heure || "",
+    type: r.natureSoin || "Consultation",
+    status: "confirmed",
+  }));
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -36,20 +137,61 @@ const Dashboard = () => {
     return variants[status as keyof typeof variants] || variants.pending;
   };
 
+
+  const handleSubmitNewAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!appointmentDate || !appointmentTime || !appointmentPatientName) {
+      toast({ title: "Missing info", description: "Please fill at least patient, date and time." });
+      return;
+    }
+    try {
+      await apiService.createAppointment({
+        idPersonne: appointmentPatientId ? Number(appointmentPatientId) : undefined,
+        numCabinet: appointmentCabinet || null,
+        dateRdv: appointmentDate,
+        heure: appointmentTime,
+        duree: appointmentDuration || "30 min",
+        observation: appointmentNotes || null,
+        nomPs: appointmentDoctor || null,
+        natureSoin: appointmentNature || null,
+        nomPer: appointmentPatientName || null,
+      });
+      addAppointment({
+        date: appointmentDate,
+        time: appointmentTime,
+        patient: appointmentPatientName,
+        type: appointmentNature || "Consultation",
+        duration: appointmentDuration || "30 min",
+      });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments", { date: today }] });
+      toast({ title: "Appointment saved", description: `${appointmentPatientName} on ${appointmentDate} at ${appointmentTime}.` });
+      setOpenNewAppointment(false);
+      setAppointmentPatientId("");
+      setAppointmentPatientName("");
+      setAppointmentDoctor("");
+      setAppointmentCabinet("");
+      setAppointmentDate("");
+      setAppointmentTime("");
+      setAppointmentDuration("");
+      setAppointmentNature("");
+      setAppointmentNotes("");
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-extrabold text-gray-800">Dashboard</h1>
+          <p className="text-gray-600">
             Welcome back! Here's what's happening today.
           </p>
         </div>
-        <Button className="bg-primary hover:bg-primary-hover">
-          <Plus className="w-4 h-4 mr-2" />
-          New Appointment
-        </Button>
+        {/* Removed New Appointment dialog/button as requested */}
       </div>
 
       {/* Stats Cards */}
@@ -165,20 +307,25 @@ const Dashboard = () => {
               <Button 
                 variant="outline" 
                 className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/appointments')}
               >
                 <CalendarCheck className="w-5 h-5 text-dental-blue" />
                 <span className="text-sm">New Appointment</span>
               </Button>
+
               <Button 
                 variant="outline" 
                 className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/patients')}
               >
                 <Users className="w-5 h-5 text-dental-blue" />
                 <span className="text-sm">Add Patient</span>
               </Button>
+
               <Button 
                 variant="outline" 
                 className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/calendar')}
               >
                 <Calendar className="w-5 h-5 text-dental-blue" />
                 <span className="text-sm">View Calendar</span>
@@ -186,6 +333,7 @@ const Dashboard = () => {
               <Button 
                 variant="outline" 
                 className="h-20 flex-col gap-2 border-dental-blue/20 hover:bg-dental-light-blue/20"
+                onClick={() => navigate('/slots')}
               >
                 <Clock className="w-5 h-5 text-dental-blue" />
                 <span className="text-sm">Manage Slots</span>

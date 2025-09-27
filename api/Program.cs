@@ -76,7 +76,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Redirect HTTP to HTTPS for local runs (matches launchSettings profiles)
+var enableHttpsRedirection = builder.Configuration.GetValue<bool>("EnableHttpsRedirection", true);
+
+if (enableHttpsRedirection)
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(policy => policy
     .AllowAnyOrigin()
@@ -89,5 +95,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.MapGet("/", () => "Welcome to the Dental Reservation API!");
+
+// Ensure database is created (for simple schema creation without migrations)
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    db.Database.EnsureCreated();
+}
 
 app.Run();
