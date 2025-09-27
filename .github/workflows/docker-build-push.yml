@@ -28,8 +28,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Check Docker Hub secrets
+        id: secrets
+        shell: bash
+        run: |
+          if [[ -n "${{ secrets.DOCKERHUB_USERNAME }}" && -n "${{ secrets.DOCKERHUB_TOKEN }}" ]]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+            echo "Docker Hub secrets present; will log in and push."
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets are missing. Build will run, but push will be skipped." >&2
+          fi
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
+        if: steps.secrets.outputs.available == 'true'
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -54,7 +67,7 @@ jobs:
         with:
           context: .
           file: api/Dockerfile
-          push: true
+          push: ${{ steps.secrets.outputs.available == 'true' }}
           platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_API_NAME }}:latest
@@ -69,7 +82,7 @@ jobs:
         with:
           context: .
           file: frontend/Dockerfile
-          push: true
+          push: ${{ steps.secrets.outputs.available == 'true' }}
           platforms: linux/amd64
           tags: |
             ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_WEB_NAME }}:latest
