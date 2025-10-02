@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,8 @@ import {
   Users,
   Calendar,
   Phone,
-  Mail
+  Mail,
+  FileText
 } from "lucide-react";
 import {
   Dialog,
@@ -42,12 +44,38 @@ import { apiService, Patient } from "@/lib/api";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 const Patients = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [matriculeFilter, setMatriculeFilter] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const actions = (p: Patient) => (
+    <div className="flex items-center space-x-2">
+      <Button
+        variant="outline"
+        onClick={() => navigate(`/patients/${p.id}/dossier`)}
+      >
+        <FileText className="h-5 w-5" />
+        Dossier
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => startEdit(p)}
+      >
+        <Edit className="h-5 w-5" />
+        Edit
+      </Button>
+      <Button
+        variant="outline"
+        onClick={() => deleteMutation.mutate(p.id)}
+      >
+        <Trash2 className="h-5 w-5" />
+        Delete
+      </Button>
+    </div>
+  );
   // Modal and form state
   const [openNewPatient, setOpenNewPatient] = useState(false);
   const [firstName, setFirstName] = useState("");
@@ -479,8 +507,17 @@ const Patients = () => {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8 text-purple-700 hover:bg-purple-100"
+                          onClick={() => navigate(`/patients/${patient.id}/dossier`)}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 text-dental-blue hover:bg-dental-light-blue/20"
-                        onClick={() => startEdit(patient)}>
+                          onClick={() => startEdit(patient)}
+                        >
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button

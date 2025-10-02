@@ -25,18 +25,16 @@ namespace Dental_reservation.api.Controllers
             try
             {
                 var query = _context.PopPersonnes.AsQueryable();
-                
-                // Filter by name if provided
+
                 if (!string.IsNullOrEmpty(name))
                 {
-                    query = query.Where(p => 
-                        (p.NomPer != null && p.NomPer.Contains(name)) || 
+                    query = query.Where(p =>
+                        (p.NomPer != null && p.NomPer.Contains(name)) ||
                         (p.PrenomPer != null && p.PrenomPer.Contains(name)));
                 }
 
                 var patients = await query.ToListAsync();
-                
-                // Map to DTOs
+
                 var patientDtos = patients.Select(p => new PatientDto
                 {
                     Id = p.IdNumPersonne,
@@ -45,27 +43,19 @@ namespace Dental_reservation.api.Controllers
                     Phone = p.Phone ?? "",
                     DateOfBirth = p.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
                     Gender = p.CodeSexePer == "1" ? "Male" : p.CodeSexePer == "2" ? "Female" : "Unknown",
-                    // LastVisit = "", // TODO: Populate from appointments table
                     LastVisit = "",
-                    // NextAppointment = "", // TODO: Populate from appointments table
                     NextAppointment = "",
-                    Status = "active", // Default status - TODO: Calculate based on last visit
-                    // MedicalHistory = new string[] { "Initial consultation" }, // TODO: Add medical history table
-                    MedicalHistory = new string[] { }, // Placeholder for future development
-                    // Insurance = "Standard Insurance", // TODO: Add insurance information
-                    Insurance = "", // Placeholder for future development
+                    Status = "active",
+                    MedicalHistory = new string[] { },
+                    Insurance = "",
                     EmergencyContact = new EmergencyContactDto
                     {
-                        // Name = "Emergency Contact", // TODO: Add emergency contact fields
                         Name = "",
-                        // Phone = "+33 1 23456789", // TODO: Add emergency contact phone
                         Phone = "",
-                        // Relationship = "Family" // TODO: Add relationship field
                         Relationship = ""
                     }
                 }).ToList();
 
-                // Filter by status if provided
                 if (!string.IsNullOrEmpty(status) && status != "all")
                 {
                     patientDtos = patientDtos.Where(p => p.Status == status).ToList();
@@ -100,22 +90,15 @@ namespace Dental_reservation.api.Controllers
                     Phone = patient.Phone ?? "",
                     DateOfBirth = patient.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
                     Gender = patient.CodeSexePer == "1" ? "Male" : patient.CodeSexePer == "2" ? "Female" : "Unknown",
-                    // LastVisit = "", // TODO: Populate from appointments table
                     LastVisit = "",
-                    // NextAppointment = "", // TODO: Populate from appointments table
                     NextAppointment = "",
-                    Status = "active", // Default status - TODO: Calculate based on last visit
-                    // MedicalHistory = new string[] { "Initial consultation" }, // TODO: Add medical history table
-                    MedicalHistory = new string[] { }, // Placeholder for future development
-                    // Insurance = "Standard Insurance", // TODO: Add insurance information
-                    Insurance = "", // Placeholder for future development
+                    Status = "active",
+                    MedicalHistory = new string[] { },
+                    Insurance = "",
                     EmergencyContact = new EmergencyContactDto
                     {
-                        // Name = "Emergency Contact", // TODO: Add emergency contact fields
                         Name = "",
-                        // Phone = "+33 1 23456789", // TODO: Add emergency contact phone
                         Phone = "",
-                        // Relationship = "Family" // TODO: Add relationship field
                         Relationship = ""
                     }
                 };
@@ -134,13 +117,13 @@ namespace Dental_reservation.api.Controllers
             try
             {
                 var totalPatients = await _context.PopPersonnes.CountAsync();
-                
+
                 var stats = new
                 {
                     total = totalPatients,
-                    active = totalPatients, // All patients are considered active for now
-                    newPatients = 0, // TODO: Calculate based on creation date
-                    inactive = 0 // TODO: Calculate based on last visit
+                    active = totalPatients,
+                    newPatients = 0,
+                    inactive = 0
                 };
 
                 return Ok(stats);
@@ -148,6 +131,48 @@ namespace Dental_reservation.api.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error retrieving stats", error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}/dossier")]
+        public async Task<IActionResult> GetDossier(int id)
+        {
+            try
+            {
+                var patient = await _context.PopPersonnes
+                    .FirstOrDefaultAsync(p => p.IdNumPersonne == id);
+
+                if (patient == null)
+                {
+                    return NotFound(new { message = "Patient not found" });
+                }
+
+                var patientDto = new PatientDto
+                {
+                    Id = patient.IdNumPersonne,
+                    Name = $"{patient.PrenomPer ?? ""} {patient.NomPer ?? ""}".Trim(),
+                    Email = patient.Email ?? "",
+                    Phone = patient.Phone ?? "",
+                    DateOfBirth = patient.DateNaissancePer?.ToString("yyyy-MM-dd") ?? "",
+                    Gender = patient.CodeSexePer == "1" ? "Male" : patient.CodeSexePer == "2" ? "Female" : "Unknown",
+                    LastVisit = "",
+                    NextAppointment = "",
+                    Status = "active",
+                    MedicalHistory = new string[] { },
+                    Insurance = "",
+                    EmergencyContact = new EmergencyContactDto { Name = "", Phone = "", Relationship = "" }
+                };
+
+                var appointments = await _context.RdvPatients
+                    .Where(r => r.IdPersonne == id)
+                    .OrderByDescending(r => r.DateRdv)
+                    .ToListAsync();
+
+                return Ok(new { patient = patientDto, appointments });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving dossier", error = ex.Message });
             }
         }
 
