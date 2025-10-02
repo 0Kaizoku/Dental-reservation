@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Appointments from "./pages/Appointments";
 import Patients from "./pages/Patients";
+import PatientDossier from "./pages/PatientDossier";
 import AvailableSlots from "./pages/AvailableSlots";
 import NotFound from "./pages/NotFound";
 import { DashboardLayout } from "./components/DashboardLayout";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/calendar" element={<ProtectedRoute><DashboardLayout><Calendar /></DashboardLayout></ProtectedRoute>} />
             <Route path="/appointments" element={<ProtectedRoute><DashboardLayout><Appointments /></DashboardLayout></ProtectedRoute>} />
             <Route path="/patients" element={<ProtectedRoute><DashboardLayout><Patients /></DashboardLayout></ProtectedRoute>} />
+            <Route path="/patients/:id/dossier" element={<ProtectedRoute><DashboardLayout><PatientDossier /></DashboardLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><DashboardLayout><Profile /></DashboardLayout></ProtectedRoute>} />
             <Route path="/slots" element={<ProtectedRoute><DashboardLayout><AvailableSlots /></DashboardLayout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><DashboardLayout><div className="p-6"><h1 className="text-2xl">Settings - Coming Soon</h1></div></DashboardLayout></ProtectedRoute>} />

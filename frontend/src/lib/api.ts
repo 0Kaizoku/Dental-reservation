@@ -26,13 +26,12 @@ export interface PatientStats {
   inactive: number;
 }
 
-// Backend RdvPatient shape
 export interface RdvPatient {
-  numRdv?: number; // double in backend, optional for create
+  numRdv?: number;
   idPersonne?: number | null;
   numCabinet?: string | null;
-  dateRdv?: string | null; // ISO date string
-  heure?: string | null; // HH:mm
+  dateRdv?: string | null;
+  heure?: string | null;
   duree?: string | null;
   observation?: string | null;
   nomPs?: string | null;
@@ -44,6 +43,11 @@ export interface RdvPatient {
   agent?: string | null;
   nomAssure?: string | null;
   status?: 'confirmed' | 'pending' | 'canceled' | null;
+}
+
+export interface PatientDossier {
+  patient: Patient;
+  appointments: RdvPatient[];
 }
 
 class ApiService {
@@ -63,7 +67,6 @@ class ApiService {
     return response.json();
   }
 
-  // Authentication
   async login(username: string, password: string): Promise<{ token: string }> {
     const response = await fetch(`${API_BASE_URL}/Auth/login`, {
       method: 'POST',
@@ -83,7 +86,6 @@ class ApiService {
     localStorage.removeItem('authToken');
   }
 
-  // Patients
   async getPatients(name?: string, status?: string, matricule?: string): Promise<Patient[]> {
     const params = new URLSearchParams();
     if (name) params.append('name', name);
@@ -105,11 +107,18 @@ class ApiService {
     return this.handleResponse<Patient>(response);
   }
 
+  async getPatientDossier(id: number): Promise<PatientDossier> {
+    const response = await fetch(`${API_BASE_URL}/Patients/${id}/dossier`, {
+      headers: this.getAuthHeaders(),
+    });
+    return this.handleResponse<PatientDossier>(response);
+  }
+
   async createPatient(payload: {
     firstName?: string;
     lastName?: string;
-    dateOfBirth?: string; // yyyy-MM-dd
-    gender?: string; // "1" or "2"
+    dateOfBirth?: string;
+    gender?: string;
     cin?: string;
     matricule?: string;
     codeCivilitePer?: string;
@@ -176,7 +185,6 @@ class ApiService {
     return this.handleResponse<PatientStats>(response);
   }
 
-  // Appointments (RendezVous)
   async getAppointments(params?: { patient?: string; doctor?: string; date?: string; }): Promise<RdvPatient[]> {
     const search = new URLSearchParams();
     if (params?.patient) search.append('patient', params.patient);
@@ -189,7 +197,6 @@ class ApiService {
     return this.handleResponse<RdvPatient[]>(response);
   }
 
-  // Available Slots
   async getAvailableSlots(doctor?: string, cabinet?: string, date?: string): Promise<string[]> {
     const search = new URLSearchParams();
     if (doctor) search.append('doctor', doctor);
@@ -202,7 +209,6 @@ class ApiService {
     return this.handleResponse<string[]>(response);
   }
 
-  // Profile
   async getProfile(): Promise<{ username: string; lastName?: string; userType?: string; }>{
     const response = await fetch(`${API_BASE_URL}/Profile/me`, {
       headers: this.getAuthHeaders(),
@@ -260,15 +266,13 @@ class ApiService {
     }
   }
 
-  // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!localStorage.getItem('authToken');
   }
 
-  // Get stored token
   getToken(): string | null {
     return localStorage.getItem('authToken');
   }
 }
 
-export const apiService = new ApiService(); 
+export const apiService = new ApiService();
