@@ -40,7 +40,6 @@ Dental-reservation/
 │  └─ Dockerfile           # Build SPA and serve via Nginx
 ├─ docker-compose.yml      # Runs both services together (api + web)
 ├─ .env                    # Compose runtime variables (NOT committed)
-├─ .env.example            # Sample env
 └─ .github/workflows/      # CI workflows (Docker build/push, .NET API CI)
 ```
 
