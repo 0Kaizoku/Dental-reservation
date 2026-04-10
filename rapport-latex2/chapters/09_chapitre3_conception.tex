@@ -1,0 +1,253 @@
+% ============================================================
+%  Chapitre 3 : Conception
+% ============================================================
+
+% ---- Page de titre du chapitre ----
+\clearpage
+\thispagestyle{chaptertitlepage}
+\vspace*{\fill}
+\begin{center}
+\rule{\textwidth}{0.4pt}\\[0.8cm]
+{\fontsize{24}{29}\selectfont\bfseries Chapitre 3}\\[0.6cm]
+{\fontsize{18}{22}\selectfont Conception}\\[0.8cm]
+\rule{\textwidth}{0.4pt}
+\end{center}
+\vspace*{\fill}
+\clearpage
+
+% ---- Contenu du chapitre ----
+\chapter{Conception}
+
+\section{Introduction}
+
+La conception de l'application a été réalisée à l'aide de diagrammes UML normalisés, générés avec l'outil \textbf{PlantUML}. Les fichiers source \texttt{.puml} sont disponibles dans le dossier \texttt{diagrams/} du projet. Les diagrammes couvrent quatre types de modélisation~: cas d'utilisation, classes, séquence et activité.
+
+% ============================================================
+\section{Diagramme de Cas d'Utilisation}
+
+Le diagramme de cas d'utilisation (Figure~\ref{fig:use_case}) identifie deux acteurs principaux et modélise l'ensemble des interactions possibles avec le système.
+
+\begin{figure}[H]
+\centering
+% Remplacer par la capture du diagramme PlantUML compilé :
+\includegraphics[width=0.75\textwidth]{use_case_diagram.png}
+\end{figure}
+\begin{figure}[H]
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme de cas d'utilisation}\\\texttt{diagrams/use\_case\_diagram.puml}\vspace{2cm}}}
+\caption{Diagramme de cas d'utilisation}
+\label{fig:use_case}
+\end{figure}
+
+\subsection{Acteurs}
+\begin{itemize}
+    \item \textbf{Utilisateur non authentifié (Guest)}~: ne peut accéder qu'à la page de connexion.
+    \item \textbf{Praticien (Administrateur)}~: après authentification, a accès à l'ensemble des fonctionnalités.
+\end{itemize}
+
+\subsection{Packages de cas d'utilisation}
+
+\begin{enumerate}
+    \item \textbf{Authentification} --- Se connecter~; Générer Token JWT (\texttt{<<include>>})
+    \item \textbf{Gestion des Patients} --- Consulter la liste~; Rechercher~; Consulter le dossier~; Ajouter~; Modifier~; Supprimer~; Statistiques
+    \item \textbf{Gestion des Rendez-vous} --- Consulter la liste~; Créer (inclut \emph{Vérifier les conflits})~; Modifier~; Supprimer~; Créneaux disponibles~; Filtrer
+    \item \textbf{Gestion du Profil} --- Consulter~; Modifier~; Changer le mot de passe
+    \item \textbf{Informations} --- Bénéficiaire~; Assuré~; Collectivité
+    \item \textbf{Gestion des Praticiens} --- Consulter la liste
+    \item \textbf{Liste d'attente} --- Consulter par médecin et date
+\end{enumerate}
+
+% ============================================================
+\section{Diagramme de Classes}
+
+Le diagramme de classes (Figure~\ref{fig:class_diagram}) modélise l'ensemble des entités du système, leurs attributs, leurs méthodes et les relations entre elles.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.70\textwidth]{class_diagram1.png}
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme de classes}\\\texttt{diagrams/class_diagram.puml}\vspace{2cm}}}
+\caption{Diagramme de classes}
+\label{fig:class_diagram}
+\end{figure}
+
+\subsection{Entités (mapping base de données)}
+
+\begin{itemize}
+    \item \textbf{User} $\rightarrow$ table \texttt{Usercmim}\\
+    Attributs~: \texttt{username} (PK), \texttt{lastName}, \texttt{password}, \texttt{userType}\\
+    Rôle~: stocke les identifiants des praticiens
+
+    \item \textbf{PopPersonne} $\rightarrow$ table \texttt{pop\_personne}\\
+    Attributs~: \texttt{IdNumPersonne} (PK, auto), \texttt{NomPer}, \texttt{PrenomPer}, \texttt{DteNaisPer}, \texttt{SexePer}, \texttt{CIN}, \texttt{NumSecuOdPer} (matricule), \texttt{CodeCollectivite}, \texttt{Email}, \texttt{Phone}\\
+    Rôle~: entité centrale représentant un patient
+
+    \item \textbf{PopAdresseP} $\rightarrow$ table \texttt{pop\_adresse\_p}\\
+    Attributs~: \texttt{IdNumAdressePer} (PK), \texttt{LibAdresse}\\
+    Rôle~: adresse postale du patient
+
+    \item \textbf{PopContratPersonne} $\rightarrow$ table \texttt{pop\_contrat\_personne}\\
+    Attribut~: \texttt{IdNumPersonneCtt} (PK)\\
+    Rôle~: contrat d'assurance
+
+    \item \textbf{Collectivite} $\rightarrow$ table \texttt{collectivite}\\
+    Attributs~: \texttt{CodeCollectivite} (PK), \texttt{RaisonSociale}, \texttt{Adresse}, \texttt{Ville}, \texttt{Region}\\
+    Rôle~: organisme d'appartenance
+
+    \item \textbf{RdvPatient} $\rightarrow$ table \texttt{tab\_RDV\_patient}\\
+    Attributs~: \texttt{NumRdv} (PK, auto), \texttt{IdPersonne} (FK), \texttt{DateRdv}, \texttt{Heure}, \texttt{DureeRdv}, \texttt{NomPs}, \texttt{Cabinet}, \texttt{NatureSoin}, \texttt{Status}, \texttt{Notes}\\
+    Rôle~: rendez-vous patient
+
+    \item \textbf{RdvPra} $\rightarrow$ table \texttt{tab\_RDV\_Pra} (Keyless)\\
+    Attributs~: \texttt{DateRDV}, \texttt{HeureDebut}, \texttt{HeureFin}, \texttt{NomPra}, \texttt{IdRDV}\\
+    Rôle~: planification praticien
+
+    \item \textbf{Praticien} $\rightarrow$ table \texttt{Praticien\_D}\\
+    Attributs~: \texttt{CodPra} (PK), \texttt{NomPra}, \texttt{CodePs}\\
+    Rôle~: référentiel praticiens
+\end{itemize}
+
+\subsection{DTOs (Data Transfer Objects)}
+
+\begin{itemize}
+    \item \textbf{LoginDto}~: \texttt{username}, \texttt{password}
+    \item \textbf{PatientDto}~: \texttt{nom}, \texttt{prenom}, \texttt{dateNaissance}, \texttt{sexe}, \texttt{cin}, \texttt{matricule}, etc.
+    \item \textbf{AssureDto}~: informations de l'assuré (personne, adresse, contrat)
+    \item \textbf{BeneficiaireDto}~: informations du bénéficiaire
+    \item \textbf{CollectiviteDto}~: informations de la collectivité
+\end{itemize}
+
+\subsection{Relations entre les classes}
+
+\begin{itemize}
+    \item \texttt{PopPersonne} \textbf{1 --- 0..1} \texttt{PopAdresseP}~: chaque patient peut avoir une adresse
+    \item \texttt{PopPersonne} \textbf{1 --- 0..1} \texttt{PopContratPersonne}~: contrat d'assurance
+    \item \texttt{PopPersonne} \textbf{0..* --- 0..1} \texttt{Collectivite}~: appartenance à une collectivité
+    \item \texttt{PopPersonne} \textbf{1 --- 0..*} \texttt{RdvPatient}~: un patient a zéro ou plusieurs rendez-vous
+    \item \texttt{Praticien} \textbf{1 --- 0..*} \texttt{RdvPra}~: planifications du praticien
+    \item Tous les contrôleurs dépendent de \texttt{ApplicationDbContext} (injection de dépendance)
+\end{itemize}
+
+% ============================================================
+\section{Diagrammes de Séquence}
+
+Trois diagrammes de séquence décrivent les interactions entre les composants principaux du système.
+
+\subsection{Séquence d'authentification}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{sequence_authentification.png}
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme de séquence --- Authentification}\\\texttt{diagrams/sequence\_authentification.puml}\vspace{2cm}}}
+\caption{Diagramme de séquence~: Authentification}
+\label{fig:seq_auth}
+\end{figure}
+
+Le flux d'authentification implique quatre participants~: \textbf{Utilisateur}, \textbf{Frontend React}, \textbf{AuthController} et \textbf{Base de données SQL Server}.
+
+\subsubsection{Scénario nominal (succès)}
+\begin{enumerate}
+    \item L'utilisateur saisit son email et son mot de passe sur la page Login.
+    \item Le composant \texttt{Login.tsx} appelle \texttt{apiService.login(email, password)}.
+    \item Le service API envoie \texttt{POST /api/Auth/login} avec \texttt{\{username, password\}}.
+    \item Le \texttt{AuthController} recherche l'utilisateur via LINQ~: \texttt{dbContext.Users.FirstOrDefault(...)}.
+    \item Comparaison du mot de passe.
+    \item Création du \texttt{JwtSecurityToken} avec claim \texttt{username}, expiration 1h, signature HMAC-SHA256.
+    \item Retour du token dans la réponse \texttt{200 OK}.
+    \item Stockage dans \texttt{localStorage} et redirection vers \texttt{/dashboard}.
+\end{enumerate}
+
+\subsubsection{Scénario alternatif (échec)}
+Si l'utilisateur n'existe pas ou si le mot de passe est incorrect~: réponse \texttt{401 Unauthorized}. Le frontend affiche une notification toast rouge.
+
+\subsection{Séquence de gestion des rendez-vous}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{sequence_rendez_vous1.png}
+\end{figure}
+\includegraphics[width=0.9\textwidth]{sequence_rendez_vous2.png}
+\begin{figure}[H]
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme de séquence --- Gestion des rendez-vous}\\\texttt{diagrams/sequence\_rendez\_vous.puml}\vspace{2cm}}}
+\caption{Diagramme de séquence~: Gestion des rendez-vous}
+\label{fig:seq_rdv}
+\end{figure}
+
+Ce diagramme couvre quatre opérations~:
+
+\begin{enumerate}
+    \item \textbf{Consulter les créneaux disponibles}~: génération de la grille 08:00--17:30, soustraction des créneaux réservés.
+    \item \textbf{Créer un rendez-vous}~: validation $\rightarrow$ vérification conflit médecin $\rightarrow$ vérification conflit cabinet $\rightarrow$ insertion avec statut \og pending \fg.
+    \item \textbf{Modifier un rendez-vous}~: même logique de conflits $\rightarrow$ mise à jour.
+    \item \textbf{Supprimer un rendez-vous}~: confirmation $\rightarrow$ suppression $\rightarrow$ \texttt{204 No Content}.
+\end{enumerate}
+
+\subsection{Séquence de gestion des patients}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{sequence_patients1.png}
+\end{figure}
+\begin{figure}[H]
+\includegraphics[width=0.9\textwidth]{sequence_patients2.png}
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme de séquence --- Gestion des patients}\\\texttt{diagrams/sequence\_patients.puml}\vspace{2cm}}}
+\caption{Diagramme de séquence~: Gestion des patients}
+\label{fig:seq_patients}
+\end{figure}
+
+Opérations CRUD complètes sur \texttt{PopPersonne}~:
+
+\begin{enumerate}
+    \item \textbf{Consulter la liste}~: filtre optionnel $\rightarrow$ mapping \texttt{PopPersonne} $\rightarrow$ \texttt{PatientDto} avec calcul du genre.
+    \item \textbf{Consulter le dossier}~: patient + rendez-vous triés par date décroissante.
+    \item \textbf{Ajouter}~: formulaire 16 champs $\rightarrow$ création \texttt{PopPersonne} $\rightarrow$ retour DTO.
+    \item \textbf{Modifier}~: mise à jour partielle des champs non-null.
+    \item \textbf{Supprimer}~: suppression $\rightarrow$ \texttt{204 No Content}.
+\end{enumerate}
+
+% ============================================================
+\section{Diagrammes d'Activité}
+
+\subsection{Activité d'authentification}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{activity_authentification.png}
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme d'activité --- Authentification}\\\texttt{diagrams/activity\_authentification.puml}\vspace{2cm}}}
+\caption{Diagramme d'activité~: Authentification}
+\label{fig:act_auth}
+\end{figure}
+
+Le flux décisionnel~: saisie des identifiants $\rightarrow$ recherche en BDD $\rightarrow$ vérification du mot de passe $\rightarrow$ si OK~: génération JWT + stockage + redirection~; si KO~: affichage erreur.
+
+\subsection{Activité de création d'un rendez-vous}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{activity_rendez_vous.png}
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme d'activité --- Création d'un rendez-vous}\\\texttt{diagrams/activity\_rendez\_vous.puml}\vspace{2cm}}}
+\caption{Diagramme d'activité~: Création d'un rendez-vous}
+\label{fig:act_rdv}
+\end{figure}
+
+Flux~: sélection patient/médecin/cabinet $\rightarrow$ vérification date et heure $\rightarrow$ vérification conflit médecin $\rightarrow$ vérification conflit cabinet $\rightarrow$ si aucun conflit~: insertion avec statut \og pending \fg~; sinon~: erreur 409.
+
+\subsection{Activité de gestion des patients (CRUD)}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{activity_patients.png}
+%\fbox{\parbox{0.85\textwidth}{\centering\vspace{2cm}\textit{Diagramme d'activité --- Gestion des patients}\\\texttt{diagrams/activity\_patients.puml}\vspace{2cm}}}
+\caption{Diagramme d'activité~: Gestion des patients (CRUD)}
+\label{fig:act_patients}
+\end{figure}
+
+Quatre opérations en parallèle (fork/join)~:
+\begin{itemize}
+    \item \textbf{Consulter}~: charger la liste $\rightarrow$ appliquer filtres $\rightarrow$ afficher tableau
+    \item \textbf{Ajouter}~: ouvrir modale $\rightarrow$ remplir formulaire $\rightarrow$ POST $\rightarrow$ rafraîchir
+    \item \textbf{Modifier}~: sélectionner $\rightarrow$ ouvrir modale $\rightarrow$ PUT $\rightarrow$ rafraîchir
+    \item \textbf{Supprimer}~: sélectionner $\rightarrow$ confirmer $\rightarrow$ DELETE $\rightarrow$ rafraîchir
+\end{itemize}
+
+\section{Conclusion}
+
+Ce chapitre a présenté la conception UML complète de l'application \textbf{Dental Reservation} à travers 8 diagrammes couvrant les cas d'utilisation, les classes, les séquences d'interaction et les flux d'activité. Cette modélisation a servi de base solide pour la phase de réalisation détaillée dans le chapitre suivant.

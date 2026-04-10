@@ -1,0 +1,29 @@
+% ============================================================
+%  Abstract — Titre gras centré 24pt Times New Roman
+%  Corps 14pt Times New Roman
+%  + Keywords
+% ============================================================
+\clearpage
+\thispagestyle{chaptertitlepage}
+
+\vspace*{2cm}
+
+\begin{center}
+{\fontsize{24}{29}\selectfont\bfseries Abstract}
+\end{center}
+
+\vspace{1.5cm}
+
+{\fontsize{14}{18}\selectfont
+The \textbf{Dental Reservation} application is a full-stack web solution designed to streamline the management of dental clinics. It provides secure JWT-based authentication, comprehensive patient record management (CRUD operations on the \texttt{pop\_personne} table), appointment scheduling with real-time conflict detection, calendar visualization with a weekly grid, available slots management, and an administration dashboard with key performance indicators.
+
+The backend is built with \textbf{ASP.NET Core 8} and \textbf{Entity Framework Core} connected to a \textbf{SQL Server} database, exposing a RESTful API secured by JWT Bearer tokens. The frontend is a \textbf{React 18} single-page application written in \textbf{TypeScript}, bundled with \textbf{Vite}, styled with \textbf{TailwindCSS}, and powered by \textbf{shadcn/ui} component library. The two tiers communicate via HTTP, with the Vite dev server proxying \texttt{/api} requests to the backend. Docker and Docker Compose are used for containerized deployment with an Nginx reverse proxy.
+}
+
+\vspace{1.5cm}
+
+{\fontsize{14}{18}\selectfont
+\textbf{Keywords:} Web application, Dental clinic, Appointment management, ASP.NET Core, React, TypeScript, JWT, Entity Framework Core, SQL Server, Docker, REST API, TailwindCSS, shadcn/ui.
+}
+
+\clearpage

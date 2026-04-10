@@ -1,0 +1,46 @@
+@startuml Sequence_Authentification
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequence {
+    LifeLineBorderColor #333
+    ParticipantBackgroundColor #E3F2FD
+    ParticipantBorderColor #1565C0
+}
+
+title Diagramme de Séquence — Authentification (Login)
+
+actor "Utilisateur" as User
+participant "Frontend\n(React)" as FE #E8F5E9
+participant "AuthController" as Auth #FFF3E0
+participant "ApplicationDbContext" as DB #FCE4EC
+database "SQL Server" as SQL #F3E5F5
+
+User -> FE : Saisir username + mot de passe
+activate FE
+FE -> Auth : POST /api/Auth/login\n{username, password}
+activate Auth
+
+Auth -> DB : FindAsync(username)
+activate DB
+DB -> SQL : SELECT * FROM Usercmim\nWHERE username = ?
+activate SQL
+SQL --> DB : User ou null
+deactivate SQL
+DB --> Auth : User ou null
+deactivate DB
+
+alt Utilisateur non trouvé ou mot de passe incorrect
+    Auth --> FE : 401 Unauthorized
+    FE --> User : Afficher erreur\n"Identifiants incorrects"
+else Authentification réussie
+    Auth -> Auth : Générer JWT Token\n(Claims: username)\n(Expire: 1h)
+    Auth --> FE : 200 OK\n{Token: "eyJ..."}
+    deactivate Auth
+    FE -> FE : Stocker le token\n(localStorage)
+    FE --> User : Redirection vers\nle Dashboard
+end
+
+deactivate FE
+
+@enduml

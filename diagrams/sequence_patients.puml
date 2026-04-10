@@ -1,0 +1,163 @@
+@startuml Sequence_Gestion_Patients
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequence {
+    LifeLineBorderColor #333
+    ParticipantBackgroundColor #E3F2FD
+    ParticipantBorderColor #1565C0
+}
+
+title Diagramme de Séquence — Gestion des Patients
+
+actor "Praticien" as User
+participant "Frontend\n(React)" as FE #E8F5E9
+participant "PatientsController" as PC #FFF3E0
+participant "ApplicationDbContext" as DB #FCE4EC
+database "SQL Server" as SQL #F3E5F5
+
+== Consulter la liste des patients ==
+
+User -> FE : Accéder à la page Patients
+activate FE
+FE -> PC : GET /api/Patients\n?name=X&status=Y
+activate PC
+
+PC -> DB : Requête PopPersonnes\n(filtre par nom si fourni)
+activate DB
+DB -> SQL : SELECT * FROM pop_personne\nWHERE NomPer LIKE '%X%'\nOR PrenomPer LIKE '%X%'
+activate SQL
+SQL --> DB : Liste de patients
+deactivate SQL
+DB --> PC : List<PopPersonne>
+deactivate DB
+
+PC -> PC : Mapper vers PatientDto[]
+PC --> FE : 200 OK\n[{id, name, email, phone, ...}]
+deactivate PC
+FE --> User : Afficher la liste des patients
+deactivate FE
+
+== Consulter le dossier d'un patient ==
+
+User -> FE : Cliquer sur un patient
+activate FE
+FE -> PC : GET /api/Patients/{id}/dossier
+activate PC
+
+PC -> DB : Rechercher patient par id
+activate DB
+DB -> SQL : SELECT * FROM pop_personne\nWHERE Id = ?
+activate SQL
+SQL --> DB : PopPersonne
+deactivate SQL
+DB --> PC : Patient trouvé
+deactivate DB
+
+PC -> DB : Rechercher ses rendez-vous
+activate DB
+DB -> SQL : SELECT * FROM tab_RDV_patient\nWHERE id_personne = ?\nORDER BY date_rdv DESC
+activate SQL
+SQL --> DB : Liste RDV
+deactivate SQL
+DB --> PC : List<RdvPatient>
+deactivate DB
+
+PC --> FE : 200 OK\n{patient: {...}, appointments: [...]}
+deactivate PC
+FE --> User : Afficher le dossier complet
+deactivate FE
+
+== Ajouter un patient ==
+
+User -> FE : Remplir le formulaire\nd'ajout patient
+activate FE
+FE -> PC : POST /api/Patients\n{firstName, lastName, dateOfBirth, ...}
+activate PC
+
+PC -> PC : Créer entité PopPersonne\nà partir du DTO
+PC -> DB : Ajouter PopPersonne
+activate DB
+DB -> SQL : INSERT INTO pop_personne\n(...) VALUES (...)
+activate SQL
+SQL --> DB : OK (Id généré)
+deactivate SQL
+DB --> PC : Entité sauvegardée
+deactivate DB
+
+PC -> PC : Mapper vers PatientDto
+PC --> FE : 200 OK\n{id, name, email, ...}
+deactivate PC
+FE --> User : "Patient ajouté avec succès"
+deactivate FE
+
+== Modifier un patient ==
+
+User -> FE : Modifier les infos\nd'un patient
+activate FE
+FE -> PC : PUT /api/Patients/{id}\n{firstName, lastName, ...}
+activate PC
+
+PC -> DB : Rechercher patient par id
+activate DB
+DB -> SQL : SELECT * FROM pop_personne\nWHERE Id = ?
+activate SQL
+SQL --> DB : PopPersonne
+deactivate SQL
+DB --> PC : Patient
+deactivate DB
+
+alt Patient non trouvé
+    PC --> FE : 404 Not Found
+    FE --> User : "Patient introuvable"
+else Patient trouvé
+    PC -> PC : Mettre à jour les champs
+    PC -> DB : SaveChanges()
+    activate DB
+    DB -> SQL : UPDATE pop_personne\nSET ... WHERE Id = ?
+    activate SQL
+    SQL --> DB : OK
+    deactivate SQL
+    DB --> PC : Sauvegardé
+    deactivate DB
+    PC --> FE : 200 OK\n{patient mis à jour}
+    FE --> User : "Patient modifié"
+end
+deactivate PC
+deactivate FE
+
+== Supprimer un patient ==
+
+User -> FE : Supprimer un patient
+activate FE
+FE -> PC : DELETE /api/Patients/{id}
+activate PC
+
+PC -> DB : Rechercher patient par id
+activate DB
+DB -> SQL : SELECT * FROM pop_personne\nWHERE Id = ?
+activate SQL
+SQL --> DB : Résultat
+deactivate SQL
+DB --> PC : Patient ou null
+deactivate DB
+
+alt Patient non trouvé
+    PC --> FE : 404 Not Found
+    FE --> User : "Patient introuvable"
+else Patient trouvé
+    PC -> DB : Supprimer PopPersonne
+    activate DB
+    DB -> SQL : DELETE FROM pop_personne\nWHERE Id = ?
+    activate SQL
+    SQL --> DB : OK
+    deactivate SQL
+    DB --> PC : Supprimé
+    deactivate DB
+    PC --> FE : 204 No Content
+    FE --> User : "Patient supprimé"
+end
+deactivate PC
+deactivate FE
+
+@enduml

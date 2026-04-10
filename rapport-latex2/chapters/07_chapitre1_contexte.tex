@@ -1,0 +1,151 @@
+% ============================================================
+%  Chapitre 1 : Contexte Général
+%  Titres chapitres : gras 18pt
+%  Titres paragraphes (sections) : gras 18pt
+%  Sous-paragraphes : normal
+%  Corps : 12pt Times New Roman, interligne 1.5
+% ============================================================
+
+% ---- Page de titre du chapitre ----
+\clearpage
+\thispagestyle{chaptertitlepage}
+\vspace*{\fill}
+\begin{center}
+\rule{\textwidth}{0.4pt}\\[0.8cm]
+{\fontsize{24}{29}\selectfont\bfseries Chapitre 1}\\[0.6cm]
+{\fontsize{18}{22}\selectfont Contexte Général}\\[0.8cm]
+\rule{\textwidth}{0.4pt}
+\end{center}
+\vspace*{\fill}
+\clearpage
+
+% ---- Contenu du chapitre ----
+\chapter{Contexte Général}
+
+\section{Introduction}
+
+Ce chapitre présente le contexte général dans lequel s'inscrit le projet \textbf{Dental Reservation}. Il décrit l'organisme d'accueil, la problématique identifiée, les objectifs du projet et un aperçu de la solution développée.
+
+\section{Organisme d'accueil}
+
+Le projet a été réalisé dans le cadre d'un Projet de Fin d'Année (PFA) au sein d'un cabinet dentaire. L'organisme d'accueil est spécialisé dans la prestation de soins dentaires et la gestion des rendez-vous patients. L'objectif principal du stage était de moderniser le système de gestion existant en le remplaçant par une solution numérique performante et ergonomique.
+
+Le cabinet gère quotidiennement un volume important de patients, de rendez-vous et de praticiens. Avant la mise en place de cette application, la gestion se faisait principalement à travers~:
+
+\begin{itemize}
+    \item Un registre papier pour les rendez-vous
+    \item Des fiches cartonnées pour les dossiers patients
+    \item Des appels téléphoniques pour la confirmation des rendez-vous
+\end{itemize}
+
+La nécessité d'un outil centralisé s'est imposée pour~:
+
+\begin{itemize}
+    \item \textbf{Éliminer les erreurs de planification}~: doublons de créneaux, conflits horaires entre médecins et cabinets
+    \item \textbf{Centraliser les dossiers patients}~: accès instantané aux informations personnelles, aux contrats d'assurance et à l'historique des consultations
+    \item \textbf{Offrir une vue calendaire claire} de la charge de travail de chaque praticien
+    \item \textbf{Permettre un accès sécurisé} à l'application, réservé aux personnels autorisés
+    \item \textbf{Automatiser les calculs}~: créneaux disponibles, statistiques, âge des patients
+\end{itemize}
+
+% ============================================================
+\section{Présentation du projet}
+
+L'application \textbf{Dental Reservation} est une plateforme web full-stack qui permet aux cabinets dentaires de gérer efficacement leurs opérations quotidiennes. Le système couvre les fonctionnalités suivantes~:
+
+\subsection{Authentification et sécurité}
+\begin{itemize}
+    \item Connexion sécurisée par identifiant (email) et mot de passe
+    \item Génération de jetons JWT avec une durée de validité d'une heure
+    \item Protection de toutes les routes API par le middleware d'autorisation
+    \item Stockage du token côté client dans le \texttt{localStorage} du navigateur
+    \item Routes React protégées par un composant \texttt{ProtectedRoute} qui redirige les utilisateurs non authentifiés
+\end{itemize}
+
+\subsection{Gestion des patients}
+\begin{itemize}
+    \item Création de fiches patients avec informations complètes~: nom, prénom, date de naissance, sexe, CIN, matricule, code collectivité, adresse, email, téléphone
+    \item Modification et suppression de patients existants
+    \item Recherche dynamique par nom, prénom, téléphone, email ou matricule
+    \item Consultation du dossier complet d'un patient avec son historique de rendez-vous, triés par date décroissante
+    \item Export du dossier patient en PDF via la fonction d'impression du navigateur
+    \item Statistiques sur le nombre total de patients actifs
+\end{itemize}
+
+\subsection{Gestion des rendez-vous}
+\begin{itemize}
+    \item Création de rendez-vous avec sélection du patient (via un composant Combobox recherchable), du médecin, du cabinet, de la date, de l'heure, de la durée et de la nature du soin
+    \item Détection automatique des conflits de créneaux~: le serveur vérifie qu'aucun rendez-vous actif n'existe pour le même médecin ou le même cabinet à la même date et heure
+    \item Modification du statut (confirmé, en attente, annulé) et des informations d'un rendez-vous
+    \item Suppression de rendez-vous
+    \item Filtrage par patient, médecin, date et statut
+\end{itemize}
+
+\subsection{Calendrier hebdomadaire}
+\begin{itemize}
+    \item Vue sur 7 jours (lundi à dimanche) avec navigation semaine par semaine
+    \item Grille horaire de 08:00 à 17:30 avec pas de 30 minutes
+    \item Affichage des rendez-vous dans les cellules avec code couleur selon le statut (vert = confirmé, jaune = en attente, rouge = annulé)
+    \item Indicateur visuel de l'heure courante (ligne rouge) sur la colonne du jour
+    \item Panneau latéral \og Today's Schedule \fg{} avec la liste des rendez-vous du jour
+\end{itemize}
+
+\subsection{Créneaux disponibles}
+\begin{itemize}
+    \item Grille visuelle des créneaux horaires avec distinction disponible/réservé
+    \item Durée configurable du créneau (15, 30, 45 ou 60 minutes)
+    \item Statistiques de remplissage~: total de créneaux, disponibles, réservés, taux d'utilisation
+    \item Réservation rapide au clic sur un créneau disponible
+\end{itemize}
+
+\subsection{Profil utilisateur}
+\begin{itemize}
+    \item Consultation et modification des informations du compte
+    \item Changement de mot de passe sécurisé (ancien mot de passe requis)
+\end{itemize}
+
+\subsection{Tableau de bord}
+\begin{itemize}
+    \item Métriques clés en temps réel~: nombre total de rendez-vous, rendez-vous du jour, nombre de patients, créneaux disponibles
+    \item Liste des rendez-vous récents du jour
+    \item Accès rapide aux fonctionnalités principales via des boutons dédiés
+\end{itemize}
+
+% ============================================================
+\section{Aperçu de la solution}
+
+La solution repose sur une architecture \textbf{client-serveur} composée de trois couches principales~:
+
+\subsection{Couche Backend (API REST)}
+
+Développée avec \textbf{ASP.NET Core 8}, elle expose une API RESTful sécurisée par JWT Bearer. Le framework utilise \textbf{Entity Framework Core} comme ORM pour communiquer avec une base de données \textbf{SQL Server}. L'application est structurée selon le pattern MVC (Model-View-Controller)~:
+
+\begin{itemize}
+    \item \textbf{Models}~: 8 entités mappées sur des tables SQL Server --- \texttt{User} (table \texttt{Usercmim}), \texttt{PopPersonne} (table \texttt{pop\_personne}), \texttt{PopAdresseP} (table \texttt{pop\_adresse\_p}), \texttt{PopContratPersonne} (table \texttt{pop\_contrat\_personne}), \texttt{Collectivite} (table \texttt{collectivite}), \texttt{RdvPatient} (table \texttt{tab\_RDV\_patient}), \texttt{RdvPra} (table \texttt{tab\_RDV\_Pra}), \texttt{Praticien} (table \texttt{Praticien\_D}). Des DTOs (\texttt{LoginDto}, \texttt{PatientDto}, \texttt{AssureDto}, \texttt{BeneficiaireDto}, \texttt{CollectiviteDto}) assurent le transfert de données.
+    \item \textbf{Controllers}~: 7 contrôleurs --- \texttt{AuthController}, \texttt{PatientsController}, \texttt{RendezVousController}, \texttt{PraticienController}, \texttt{ProfileController}, \texttt{InformationController}, \texttt{ListeAttenteController}.
+    \item \textbf{Data}~: \texttt{ApplicationDbContext} hérite de \texttt{DbContext} et configure les 8 \texttt{DbSet} avec les mappings Fluent API.
+\end{itemize}
+
+\subsection{Couche Frontend (SPA React)}
+
+Construite avec \textbf{React 18}, \textbf{TypeScript} et \textbf{Vite}, elle consomme l'API backend via un service centralisé (\texttt{ApiService}). L'interface utilise la bibliothèque de composants \textbf{shadcn/ui} basée sur \textbf{Radix UI}, stylisée avec \textbf{TailwindCSS}. L'application comprend~:
+
+\begin{itemize}
+    \item 8 pages principales~: Login, Dashboard, Calendar, Appointments, Patients, PatientDossier, AvailableSlots, Profile
+    \item 3 hooks personnalisés~: \texttt{useAuth} (contexte d'authentification), \texttt{useAppointments} (gestion d'état local des RDV), \texttt{usePatients} (hook de récupération des patients)
+    \item Composants structurels~: \texttt{AppSidebar} (navigation), \texttt{DashboardLayout} (mise en page), \texttt{NotificationsPanel} (notifications)
+    \item Proxy Vite~: les requêtes \texttt{/api} sont automatiquement redirigées vers \texttt{https://localhost:7091}
+\end{itemize}
+
+\subsection{Infrastructure}
+
+\begin{itemize}
+    \item \textbf{Docker}~: builds multi-étapes pour le backend (restore $\rightarrow$ build $\rightarrow$ publish) et le frontend (npm install $\rightarrow$ build $\rightarrow$ Nginx)
+    \item \textbf{Docker Compose}~: orchestre les deux services (\texttt{api} sur port 5057, \texttt{frontend} sur port 80)
+    \item \textbf{Nginx}~: sert les fichiers statiques du frontend et proxy les requêtes \texttt{/api} vers le backend
+    \item \textbf{GitHub Actions}~: pipeline CI/CD pour la construction automatique des images Docker
+\end{itemize}
+
+\section{Conclusion}
+
+Ce chapitre a permis de présenter le contexte général du projet, l'organisme d'accueil et la problématique à laquelle l'application \textbf{Dental Reservation} répond. L'aperçu de la solution a mis en lumière les trois couches de l'architecture (backend, frontend, infrastructure) et les technologies choisies. Le chapitre suivant détaillera l'étude fonctionnelle et technique du système.

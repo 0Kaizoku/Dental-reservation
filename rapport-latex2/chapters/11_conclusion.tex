@@ -1,0 +1,51 @@
+% ============================================================
+%  Conclusion Générale et Perspectives
+%  Titre : gras centré 24pt Times New Roman
+% ============================================================
+\clearpage
+\thispagestyle{plain}
+
+\vspace*{2cm}
+
+\begin{center}
+{\fontsize{24}{29}\selectfont\bfseries Conclusion Générale et Perspectives}
+\end{center}
+\addcontentsline{toc}{chapter}{Conclusion Générale et Perspectives}
+
+\vspace{1.5cm}
+
+Le projet \textbf{Dental Reservation} a permis de concevoir et réaliser une solution web complète, moderne et fonctionnelle pour la gestion des cabinets dentaires. L'application couvre l'ensemble du cycle de gestion~: de l'authentification sécurisée du praticien, à la gestion des patients et de leurs dossiers médicaux, en passant par la planification intelligente des rendez-vous avec détection automatique des conflits de créneaux.
+
+Le choix d'une architecture client-serveur avec un backend ASP.NET Core 8 et un frontend React TypeScript a permis une séparation claire des responsabilités, facilitant la maintenance et l'évolution du système. L'utilisation d'Entity Framework Core comme ORM a simplifié les interactions avec la base de données SQL Server tout en protégeant contre les injections SQL. TanStack React Query a optimisé la gestion de l'état serveur côté frontend, offrant un cache intelligent et une synchronisation automatique.
+
+La modélisation UML réalisée avec PlantUML (8 diagrammes) a fourni une base solide de conception avant l'implémentation, couvrant les cas d'utilisation, les classes, les séquences d'interaction et les flux d'activité.
+
+La conteneurisation avec Docker et Docker Compose assure un déploiement reproductible et portable, et la documentation API via Swagger facilite l'intégration et les tests.
+
+\section*{Perspectives d'évolution}
+
+Plusieurs axes d'amélioration et d'extension sont envisagés pour les versions futures~:
+
+\begin{enumerate}
+    \item \textbf{Application mobile}~: Développement d'une application mobile React Native ou Flutter permettant aux patients de prendre rendez-vous directement depuis leur smartphone et de recevoir des rappels.
+
+    \item \textbf{Notifications push et rappels}~: Intégration d'un service d'envoi de rappels par email (via SendGrid) ou SMS (via Twilio) avant chaque rendez-vous, réduisant le taux de rendez-vous manqués.
+
+    \item \textbf{Gestion des paiements et facturation}~: Ajout d'un module de facturation permettant de générer des factures, suivre les paiements et s'intégrer avec des solutions de paiement en ligne.
+
+    \item \textbf{Tableau de bord analytique avancé}~: Intégration de graphiques interactifs avec des bibliothèques comme Recharts ou Chart.js pour visualiser l'évolution des rendez-vous, le taux de remplissage, et les tendances.
+
+    \item \textbf{Multi-cabinet et multi-rôles}~: Support de plusieurs cabinets avec des rôles différenciés (administrateur, praticien, secrétaire, patient) et des permissions granulaires.
+
+    \item \textbf{Intégration avec des systèmes tiers}~: Connexion avec des logiciels de comptabilité, des systèmes d'information hospitaliers (SIH), ou des annuaires de professionnels de santé.
+
+    \item \textbf{Hachage des mots de passe}~: Remplacement du stockage en clair des mots de passe par un algorithme de hachage sécurisé (bcrypt ou Argon2) pour une sécurité renforcée.
+
+    \item \textbf{Tests automatisés}~: Mise en place d'une suite de tests unitaires (xUnit pour le backend, Vitest pour le frontend) et de tests d'intégration pour garantir la fiabilité du code.
+
+    \item \textbf{Internationalisation (i18n)}~: Support multilingue (français, anglais, arabe) pour les cabinets opérant dans des environnements multilingues.
+
+    \item \textbf{Prise de rendez-vous en ligne par les patients}~: Portail web dédié permettant aux patients de consulter les créneaux disponibles et de réserver eux-mêmes leurs rendez-vous.
+\end{enumerate}
+
+\clearpage

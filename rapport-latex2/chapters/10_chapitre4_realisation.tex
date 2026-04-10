@@ -1,0 +1,327 @@
+% ============================================================
+%  Chapitre 4 : Réalisation
+% ============================================================
+
+% ---- Page de titre du chapitre ----
+\clearpage
+\thispagestyle{chaptertitlepage}
+\vspace*{\fill}
+\begin{center}
+\rule{\textwidth}{0.4pt}\\[0.8cm]
+{\fontsize{24}{29}\selectfont\bfseries Chapitre 4}\\[0.6cm]
+{\fontsize{18}{22}\selectfont Réalisation}\\[0.8cm]
+\rule{\textwidth}{0.4pt}
+\end{center}
+\vspace*{\fill}
+\clearpage
+
+% ---- Contenu du chapitre ----
+\chapter{Réalisation}
+
+\section{Introduction}
+
+La phase de réalisation a consisté à implémenter l'ensemble des fonctionnalités spécifiées dans l'étude fonctionnelle et technique, et modélisées dans les diagrammes UML. Le développement a suivi une approche itérative, en commençant par la couche backend (API et base de données), puis la couche frontend (interface utilisateur).
+
+L'environnement de développement comprend~:
+\begin{itemize}
+    \item \textbf{IDE}~: Visual Studio Code avec les extensions C\#, TypeScript, Tailwind CSS IntelliSense
+    \item \textbf{Backend}~: \texttt{dotnet run} (port HTTPS 7091, HTTP 5057)
+    \item \textbf{Frontend}~: \texttt{npm run dev} (port 8080, proxy vers le backend)
+    \item \textbf{Base de données}~: SQL Server LocalDB (\texttt{(localdb)\textbackslash MSSQLLocalDB}, base \texttt{CabinetD})
+\end{itemize}
+
+% ============================================================
+\section{Sécurité~: Authentification et Contrôle d'accès}
+
+La sécurité de l'application repose sur le standard \textbf{JSON Web Token (JWT)}, un mécanisme d'authentification \emph{stateless} largement adopté dans les architectures REST modernes.
+
+\subsection{Configuration JWT côté backend}
+
+Dans le fichier \texttt{Program.cs}, le middleware d'authentification ASP.NET Core est configuré au démarrage~:
+
+\begin{lstlisting}[language={[Sharp]C}, caption={Configuration JWT dans Program.cs}]
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => {
+        options.TokenValidationParameters = new TokenValidationParameters {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = configuration["Jwt:Issuer"],
+            ValidAudience = configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(configuration["Jwt:Key"]))
+        };
+    });
+\end{lstlisting}
+
+Les paramètres JWT sont stockés dans \texttt{appsettings.json}~:
+\begin{itemize}
+    \item \texttt{Jwt:Key}~: clé secrète HMAC-SHA256 pour la signature du token
+    \item \texttt{Jwt:Issuer}~: identifiant de l'émetteur (le backend)
+    \item \texttt{Jwt:Audience}~: identifiant de l'audience (le frontend)
+\end{itemize}
+
+Le \texttt{AuthController} expose un unique endpoint \texttt{POST /api/Auth/login} qui~:
+\begin{enumerate}
+    \item Reçoit un \texttt{LoginDto} contenant \texttt{username} et \texttt{password}.
+    \item Recherche l'utilisateur dans la table \texttt{Usercmim} par \texttt{username}.
+    \item Compare le mot de passe fourni avec celui stocké en base.
+    \item Si valide, crée un \texttt{SecurityTokenDescriptor} avec un claim \texttt{ClaimTypes.Name}, une expiration de 1 heure, et une signature HMAC-SHA256.
+    \item Retourne le token JWT sérialisé et les informations utilisateur.
+\end{enumerate}
+
+\subsection{Protection côté frontend}
+
+Le frontend utilise un \textbf{pattern Provider/Context} (React Context API) pour gérer l'authentification de manière globale~:
+
+\begin{itemize}
+    \item \textbf{AuthProvider} (\texttt{use-auth.tsx})~: enveloppe toute l'application et expose via le contexte~:
+    \begin{itemize}
+        \item \texttt{user}~: l'utilisateur connecté (ou null)
+        \item \texttt{isAuthenticated}~: booléen dérivé de la présence du token
+        \item \texttt{login(email, password)}~: appelle l'API, stocke le token dans \texttt{localStorage}
+        \item \texttt{logout()}~: supprime le token, redirige vers la page de connexion
+        \item \texttt{updateUser(userData)}~: met à jour les données utilisateur locales
+    \end{itemize}
+    
+    \item \textbf{ProtectedRoute}~: composant wrapper qui vérifie \texttt{isAuthenticated}. Si l'utilisateur n'est pas connecté, redirection automatique vers \texttt{/}.
+    
+    \item \textbf{ApiService.getAuthHeaders()}~: méthode qui injecte automatiquement l'en-tête \texttt{Authorization: Bearer <token>} dans chaque requête API.
+\end{itemize}
+
+\subsection{Swagger avec authentification}
+
+En environnement de développement, Swagger UI est activé avec un bouton \og Authorize \fg{} permettant de saisir le token JWT. La configuration inclut un \texttt{SecurityDefinition} de type Bearer et un \texttt{SecurityRequirement} global, permettant de tester tous les endpoints protégés directement depuis le navigateur.
+
+% ============================================================
+\section{Gestion des requêtes et communication client-serveur}
+
+\subsection{Service API centralisé}
+
+Toute la communication entre le frontend et le backend est centralisée dans la classe \textbf{ApiService} (\texttt{src/lib/api.ts}). Cette classe fournit une abstraction de haut niveau sur l'API Fetch~:
+
+\begin{itemize}
+    \item \textbf{Authentification}~: \texttt{login()}, \texttt{logout()}, \texttt{isAuthenticated()}, \texttt{getToken()}, \texttt{getAuthHeaders()}
+    \item \textbf{Patients}~: \texttt{getPatients()}, \texttt{createPatient()}, \texttt{updatePatient()}, \texttt{deletePatient()}, \texttt{getPatientStats()}, \texttt{getPatientDossier()}
+    \item \textbf{Rendez-vous}~: \texttt{getAppointments()}, \texttt{createAppointment()}, \texttt{updateAppointment()}, \texttt{deleteAppointment()}, \texttt{getAvailableSlots()}
+    \item \textbf{Profil}~: \texttt{getProfile()}, \texttt{updateProfile()}, \texttt{changePassword()}
+\end{itemize}
+
+Chaque méthode gère automatiquement l'injection des headers d'authentification, le \texttt{Content-Type: application/json}, le parsing JSON et la gestion d'erreurs.
+
+\subsection{Gestion du cache avec React Query}
+
+Le frontend utilise \textbf{TanStack React Query} pour optimiser les interactions avec l'API~:
+
+\begin{itemize}
+    \item \textbf{Queries} (\texttt{useQuery})~: les données sont mises en cache avec des clés uniques (ex~: \texttt{["patients"]}, \texttt{["appointments"]}). Le cache évite les requêtes réseau redondantes.
+    \item \textbf{Mutations} (\texttt{useMutation})~: les opérations d'écriture invalident automatiquement les caches associés via \texttt{queryClient.invalidateQueries()} après succès, déclenchent des notifications toast et gèrent les états de chargement.
+\end{itemize}
+
+\subsection{Détection des conflits de rendez-vous}
+
+La détection des conflits est implémentée côté serveur dans le \texttt{RendezVousController}~:
+
+\begin{itemize}
+    \item \textbf{Conflit médecin}~: vérifie qu'aucun rendez-vous actif (statut $\neq$ \og canceled \fg) n'existe pour le même médecin, à la même date et heure. Si conflit $\rightarrow$ \texttt{409 Conflict}.
+    \item \textbf{Conflit cabinet}~: vérifie qu'aucun rendez-vous actif n'existe pour le même cabinet, à la même date et heure. Si conflit $\rightarrow$ \texttt{409 Conflict}.
+\end{itemize}
+
+Cette double vérification garantit qu'un médecin ne peut pas avoir deux consultations simultanées et qu'un cabinet ne peut pas être utilisé par deux médecins en même temps.
+
+% ============================================================
+\section{Notifications et retour utilisateur}
+
+L'application implémente un système de notifications visuelles basé sur les composants \textbf{Toast} de shadcn/ui~:
+
+\begin{itemize}
+    \item \textbf{Notifications toast}~: chaque action déclenche une notification éphémère (vert = succès, rouge = erreur, bleu = information).
+    \item \textbf{Panneau de notifications} (\texttt{NotificationsPanel.tsx})~: accessible via l'icône cloche dans la barre de navigation, il affiche l'historique avec horodatage relatif et un badge de compteur.
+\end{itemize}
+
+% ============================================================
+\section{Interface d'administration --- Pages de l'application}
+
+\subsection{Page de connexion (Login)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.8\textwidth]{screenshot_login.png}
+ \caption{Capture d'écran~: Page de connexion}
+ \label{fig:screenshot_login}
+ \end{figure}
+
+La page de connexion (\texttt{Login.tsx}) présente~:
+\begin{itemize}
+    \item Un arrière-plan avec dégradé bleu-violet et effet glassmorphism
+    \item Une carte centrale avec logo \og DentalCare \fg, champ email, champ mot de passe
+    \item Bouton \og Sign in \fg{} avec animation de chargement (spinner)
+    \item Gestion d'erreurs via notification toast rouge
+    \item Redirection automatique vers \texttt{/dashboard} après succès
+\end{itemize}
+
+\subsection{Tableau de bord (Dashboard)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.85\textwidth]{screenshot_dashboard.png}
+ \caption{Capture d'écran~: Tableau de bord}
+ \label{fig:screenshot_dashboard}
+ \end{figure}
+
+Le Dashboard (\texttt{Dashboard.tsx}) affiche~:
+
+\textbf{4 cartes de statistiques~:}
+\begin{table}[H]
+\centering
+\begin{tabular}{@{} l l l l @{}}
+\toprule
+\textbf{Carte} & \textbf{Icône} & \textbf{Donnée} & \textbf{Couleur} \\
+\midrule
+Total Appointments & Calendar & Total RDV en base & Bleu \\
+Today's Appointments & Clock & RDV du jour & Vert \\
+Total Patients & Users & Patients actifs & Violet \\
+Available Slots & CheckCircle & Créneaux libres & Orange \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Section \og Recent Appointments \fg~:} les 6 premiers RDV du jour avec nom, type de soin, heure et badge de statut.
+
+\textbf{Section \og Quick Actions \fg~:} quatre boutons d'accès rapide vers les pages principales.
+
+\subsection{Gestion des patients (Patients)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.85\textwidth]{screenshot_patients.png}
+ \caption{Capture d'écran~: Gestion des patients}
+ \label{fig:screenshot_patients}
+ \end{figure}
+
+La page Patients (\texttt{Patients.tsx}) offre~:
+\begin{itemize}
+    \item Bouton \og + New Patient \fg{} ouvrant une modale de création
+    \item Barre de recherche avec filtrage en temps réel par nom, téléphone, email
+    \item Filtres par matricule et par statut (Active, New, Inactive)
+    \item Tableau avec colonnes~: Name, Age, Gender, Last Visit, Status, Phone, Email, Actions
+    \item Actions par ligne~: Dossier, Éditer, Supprimer
+    \item Modale de création/édition avec 16 champs
+\end{itemize}
+
+\subsection{Gestion des rendez-vous (Appointments)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.85\textwidth]{screenshot_appointments.png}
+ \caption{Capture d'écran~: Gestion des rendez-vous}
+ \label{fig:screenshot_appointments}
+ \end{figure}
+
+La page Appointments (\texttt{Appointments.tsx}) offre~:
+\begin{itemize}
+    \item Bouton \og + New Appointment \fg{} avec modale contenant~:
+    \begin{itemize}
+        \item Sélecteur de patient (Combobox recherchable avec nom + matricule)
+        \item Champs~: médecin, cabinet, date, heure, durée (15/30/45/60 min), statut, nature du soin, notes
+    \end{itemize}
+    \item Filtre par statut (Confirmed, Pending, Canceled)
+    \item Tableau~: Patient, Doctor, Cabinet, Date \& Time, Type, Duration, Status, Actions
+    \item Badges colorés selon le statut (vert/jaune/rouge)
+\end{itemize}
+
+\subsection{Calendrier hebdomadaire (Calendar)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.85\textwidth]{screenshot_calendar.png}
+ \caption{Capture d'écran~: Calendrier hebdomadaire}
+ \label{fig:screenshot_calendar}
+ \end{figure}
+
+La page Calendar (\texttt{Calendar.tsx}) présente~:
+\begin{itemize}
+    \item Navigation semaine par semaine avec boutons précédent/suivant
+    \item Grille 8 colonnes (heure + 7 jours) $\times$ 20 lignes (08:00 à 17:30, pas de 30 min)
+    \item En-têtes des jours avec mise en surbrillance du jour courant
+    \item Rendez-vous dans les cellules avec bordure latérale colorée selon le statut
+    \item Indicateur rouge de l'heure courante sur la colonne du jour
+    \item Panneau latéral \og Today's Schedule \fg{} avec les RDV du jour
+    \item Panneau \og Quick Stats \fg{} (total du jour, premier créneau)
+\end{itemize}
+
+\subsection{Créneaux disponibles (Available Slots)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.85\textwidth]{screenshot_slots.png}
+ \caption{Capture d'écran~: Créneaux disponibles}
+ \label{fig:screenshot_slots}
+ \end{figure}
+
+La page Available Slots (\texttt{AvailableSlots.tsx}) affiche~:
+\begin{itemize}
+    \item Navigation par jour avec boutons et sélecteur de date
+    \item Panneau de configuration~: durée du créneau (15/30/45/60 min), statistiques (total, disponibles, réservés, taux d'utilisation)
+    \item Grille responsive de créneaux~: vert = disponible (cliquable), gris = réservé
+    \item Modale de réservation rapide au clic sur un créneau disponible
+\end{itemize}
+
+\subsection{Dossier patient (Patient Dossier)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.85\textwidth]{screenshot_dossier.png}
+ \caption{Capture d'écran~: Dossier patient}
+ \label{fig:screenshot_dossier}
+ \end{figure}
+
+La page PatientDossier (\texttt{PatientDossier.tsx}) affiche~:
+\begin{itemize}
+    \item En-tête avec nom du patient, badge de genre, bouton retour et bouton \og Imprimer PDF \fg
+    \item Carte d'informations~: date de naissance, dernière visite, prochain RDV, téléphone, email
+    \item Tableau d'historique des rendez-vous (date, heure, docteur, nature du soin, statut)
+    \item Export PDF via \texttt{window.print()} avec feuille de style \texttt{@media print} dédiée
+\end{itemize}
+
+\subsection{Profil utilisateur (Profile)}
+
+ \begin{figure}[H]
+ \centering
+ \includegraphics[width=0.7\textwidth]{screenshot_profile.png}
+ \caption{Capture d'écran~: Page de profil}
+ \label{fig:screenshot_profile}
+ \end{figure}
+
+La page Profile (\texttt{Profile.tsx}) permet~:
+\begin{itemize}
+    \item Section \og Profile Information \fg~: email (lecture seule), nom (modifiable)
+    \item Section \og Change Password \fg~: ancien mot de passe + nouveau mot de passe
+    \item Données chargées via \texttt{GET /api/Profile/me}, modifications via \texttt{PUT}
+\end{itemize}
+
+\subsection{Navigation et mise en page}
+
+\textbf{Barre latérale} (\texttt{AppSidebar.tsx})~:
+\begin{itemize}
+    \item Logo \og DentalCare Pro \fg{} en en-tête
+    \item Menu~: Dashboard, Calendar, Appointments, Patients, Available Slots, Settings
+    \item Mode rétractable (icône seule)
+    \item Mise en surbrillance de la page active via \texttt{useLocation}
+\end{itemize}
+
+\textbf{Barre de navigation supérieure} (\texttt{DashboardLayout.tsx})~:
+\begin{itemize}
+    \item Bouton de rétraction de la sidebar
+    \item Barre de recherche globale
+    \item Bouton de notifications avec badge de compteur et panneau déroulant
+    \item Menu utilisateur (DropdownMenu)~: nom du praticien, lien Profil, bouton Logout
+\end{itemize}
+
+% ============================================================
+\section{Conclusion}
+
+La phase de réalisation a permis de livrer une application fonctionnelle couvrant l'ensemble des besoins exprimés. Les fonctionnalités clés --- authentification sécurisée, gestion CRUD des patients et des rendez-vous, détection de conflits, calendrier hebdomadaire, créneaux disponibles et profil utilisateur --- sont pleinement opérationnelles.
+
+L'architecture choisie (API REST + SPA React) offre une séparation claire des responsabilités et une expérience utilisateur fluide grâce au rendu côté client, au cache React Query et aux notifications toast instantanées.
