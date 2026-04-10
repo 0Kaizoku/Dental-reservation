@@ -1,0 +1,110 @@
+@startuml Diagramme_Cas_Utilisation
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor #E8F5E9
+    BorderColor #2E7D32
+    ArrowColor #1B5E20
+}
+
+left to right direction
+
+actor "Utilisateur\n(Non authentifié)" as Guest #LightBlue
+actor "Praticien\n(Administrateur)" as Admin #LightCoral
+actor "Système" as System #LightGray
+
+rectangle "Application Dental Reservation" {
+
+    ' ── Authentification ──
+    package "Authentification" {
+        usecase "Se connecter" as UC1
+        usecase "Générer Token JWT" as UC1a
+    }
+
+    ' ── Gestion des Patients ──
+    package "Gestion des Patients" {
+        usecase "Consulter la liste\ndes patients" as UC2
+        usecase "Rechercher un patient\n(par nom)" as UC3
+        usecase "Consulter le dossier\nd'un patient" as UC4
+        usecase "Ajouter un patient" as UC5
+        usecase "Modifier un patient" as UC6
+        usecase "Supprimer un patient" as UC7
+        usecase "Consulter les\nstatistiques patients" as UC8
+    }
+
+    ' ── Gestion des Rendez-vous ──
+    package "Gestion des Rendez-vous" {
+        usecase "Consulter la liste\ndes rendez-vous" as UC9
+        usecase "Créer un rendez-vous" as UC10
+        usecase "Modifier un rendez-vous" as UC11
+        usecase "Supprimer un rendez-vous" as UC12
+        usecase "Consulter les créneaux\ndisponibles" as UC13
+        usecase "Filtrer les rendez-vous\n(par médecin/date/patient)" as UC14
+        usecase "Vérifier les conflits\nde créneaux" as UC10a
+    }
+
+    ' ── Gestion du Profil ──
+    package "Gestion du Profil" {
+        usecase "Consulter mon profil" as UC15
+        usecase "Modifier mon profil" as UC16
+        usecase "Changer le mot de passe" as UC17
+    }
+
+    ' ── Informations ──
+    package "Informations" {
+        usecase "Consulter les infos\nd'un bénéficiaire" as UC18
+        usecase "Consulter les infos\nd'un assuré" as UC19
+        usecase "Consulter les infos\nd'une collectivité" as UC20
+    }
+
+    ' ── Gestion des Praticiens ──
+    package "Gestion des Praticiens" {
+        usecase "Consulter la liste\ndes praticiens" as UC21
+    }
+
+    ' ── Liste d'attente ──
+    package "Liste d'attente" {
+        usecase "Consulter la liste d'attente\n(par médecin et date)" as UC22
+    }
+}
+
+' ── Relations Guest ──
+Guest --> UC1
+
+' ── Relations Admin ──
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC8
+Admin --> UC9
+Admin --> UC10
+Admin --> UC11
+Admin --> UC12
+Admin --> UC13
+Admin --> UC14
+Admin --> UC15
+Admin --> UC16
+Admin --> UC17
+Admin --> UC18
+Admin --> UC19
+Admin --> UC20
+Admin --> UC21
+Admin --> UC22
+
+' ── Relations Système ──
+UC1 ..> UC1a : <<include>>
+UC10 ..> UC10a : <<include>>
+UC11 ..> UC10a : <<include>>
+
+' ── Extend ──
+UC2 ..> UC3 : <<extend>>
+UC9 ..> UC14 : <<extend>>
+
+' ── Héritage ──
+Guest <|-- Admin : <<s'authentifie>>
+
+@enduml

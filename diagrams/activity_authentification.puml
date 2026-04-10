@@ -1,0 +1,40 @@
+@startuml Activite_Authentification
+
+skinparam activity {
+    BackgroundColor #E3F2FD
+    BorderColor #1565C0
+    DiamondBackgroundColor #FFF9C4
+    DiamondBorderColor #F57F17
+}
+
+title Diagramme d'Activité — Authentification
+
+start
+
+:Utilisateur accède à la\npage de connexion;
+
+:Saisir le nom d'utilisateur\net le mot de passe;
+
+:Envoyer les identifiants\nau serveur (POST /api/Auth/login);
+
+:Rechercher l'utilisateur\ndans la base de données;
+
+if (Utilisateur trouvé ?) then (Oui)
+    if (Mot de passe correct ?) then (Oui)
+        :Générer un token JWT\n(validité : 1 heure);
+        :Retourner le token\nau client;
+        :Stocker le token\ndans le localStorage;
+        :Rediriger vers\nle Dashboard;
+        stop
+    else (Non)
+        :Retourner 401\nUnauthorized;
+        :Afficher message d'erreur\n"Identifiants incorrects";
+        stop
+    endif
+else (Non)
+    :Retourner 401\nUnauthorized;
+    :Afficher message d'erreur\n"Identifiants incorrects";
+    stop
+endif
+
+@enduml

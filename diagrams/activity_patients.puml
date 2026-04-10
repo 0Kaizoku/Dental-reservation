@@ -1,0 +1,69 @@
+@startuml Activite_Gestion_Patients
+
+skinparam activity {
+    BackgroundColor #E3F2FD
+    BorderColor #1565C0
+    DiamondBackgroundColor #FFF9C4
+    DiamondBorderColor #F57F17
+}
+
+title Diagramme d'Activité — Gestion des Patients (CRUD)
+
+start
+
+:Praticien accède à\nla page Patients;
+
+fork
+    :Consulter la liste;
+    :Requête GET /api/Patients;
+    :Récupérer les patients\ndepuis la BDD;
+
+    if (Filtre par nom ?) then (Oui)
+        :Filtrer par nom\nou prénom;
+    else (Non)
+    endif
+
+    :Mapper vers PatientDto[];
+    :Afficher la liste;
+
+fork again
+    :Ajouter un patient;
+    :Remplir le formulaire;
+    :Requête POST /api/Patients;
+    :Créer l'entité PopPersonne;
+    :Sauvegarder dans la BDD;
+    :Afficher confirmation;
+
+fork again
+    :Modifier un patient;
+    :Requête PUT /api/Patients/{id};
+    :Rechercher le patient\ndans la BDD;
+
+    if (Patient trouvé ?) then (Oui)
+        :Mettre à jour les champs;
+        :Sauvegarder;
+        :Afficher confirmation;
+    else (Non)
+        :Retourner 404 Not Found;
+        :Afficher erreur;
+    endif
+
+fork again
+    :Supprimer un patient;
+    :Requête DELETE /api/Patients/{id};
+    :Rechercher le patient\ndans la BDD;
+
+    if (Patient trouvé ?) then (Oui)
+        :Supprimer de la BDD;
+        :Retourner 204;
+        :Afficher confirmation;
+    else (Non)
+        :Retourner 404 Not Found;
+        :Afficher erreur;
+    endif
+
+end fork
+
+stop
+
+@enduml

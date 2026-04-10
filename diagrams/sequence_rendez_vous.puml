@@ -1,0 +1,161 @@
+@startuml Sequence_Gestion_Rendez_Vous
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 10
+skinparam sequence {
+    LifeLineBorderColor #333
+    ParticipantBackgroundColor #E3F2FD
+    ParticipantBorderColor #1565C0
+}
+
+title Diagramme de Séquence — Gestion des Rendez-vous
+
+actor "Praticien" as User
+participant "Frontend\n(React)" as FE #E8F5E9
+participant "RendezVousController" as RDV #FFF3E0
+participant "ApplicationDbContext" as DB #FCE4EC
+database "SQL Server" as SQL #F3E5F5
+
+== Consulter les créneaux disponibles ==
+
+User -> FE : Sélectionner médecin,\ncabinet et date
+activate FE
+FE -> RDV : GET /api/RendezVous/available-slots\n?doctor=X&cabinet=Y&date=Z
+activate RDV
+
+RDV -> RDV : Générer créneaux\n(08:00 - 17:30, pas de 30 min)
+RDV -> DB : Requête créneaux réservés
+activate DB
+DB -> SQL : SELECT heure FROM tab_RDV_patient\nWHERE date=Z AND (nomPs=X OR cabinet=Y)\nAND status != 'canceled'
+activate SQL
+SQL --> DB : Liste créneaux occupés
+deactivate SQL
+DB --> RDV : Créneaux occupés
+deactivate DB
+
+RDV -> RDV : Filtrer créneaux\n(retirer les occupés)
+RDV --> FE : 200 OK\n["08:00", "08:30", "09:30", ...]
+deactivate RDV
+FE --> User : Afficher créneaux disponibles
+deactivate FE
+
+== Créer un rendez-vous ==
+
+User -> FE : Remplir formulaire RDV\n+ sélectionner créneau
+activate FE
+FE -> RDV : POST /api/RendezVous\n{dateRdv, heure, nomPs, numCabinet, ...}
+activate RDV
+
+RDV -> RDV : Valider données\n(date, heure requis)
+
+alt Données invalides
+    RDV --> FE : 400 Bad Request
+    FE --> User : Afficher erreur de validation
+else Données valides
+    RDV -> DB : Vérifier conflit médecin
+    activate DB
+    DB -> SQL : SELECT COUNT(*) FROM tab_RDV_patient\nWHERE nomPs=X AND date=Z AND heure=H\nAND status != 'canceled'
+    activate SQL
+    SQL --> DB : Résultat
+    deactivate SQL
+    DB --> RDV : Conflit ou non
+    deactivate DB
+
+    RDV -> DB : Vérifier conflit cabinet
+    activate DB
+    DB -> SQL : SELECT COUNT(*) FROM tab_RDV_patient\nWHERE cabinet=Y AND date=Z AND heure=H\nAND status != 'canceled'
+    activate SQL
+    SQL --> DB : Résultat
+    deactivate SQL
+    DB --> RDV : Conflit ou non
+    deactivate DB
+
+    alt Conflit détecté
+        RDV --> FE : 409 Conflict\n"Créneau déjà réservé"
+        FE --> User : Afficher erreur de conflit
+    else Aucun conflit
+        RDV -> DB : Ajouter RdvPatient
+        activate DB
+        DB -> SQL : INSERT INTO tab_RDV_patient\n(...) VALUES (...)
+        activate SQL
+        SQL --> DB : OK (NumRdv généré)
+        deactivate SQL
+        DB --> RDV : RdvPatient créé
+        deactivate DB
+        RDV --> FE : 200 OK\n{numRdv, dateRdv, heure, ...}
+        FE --> User : Afficher confirmation\n"RDV créé avec succès"
+    end
+end
+deactivate RDV
+deactivate FE
+
+== Modifier un rendez-vous ==
+
+User -> FE : Modifier un RDV existant
+activate FE
+FE -> RDV : PUT /api/RendezVous/{numRdv}\n{dateRdv, heure, ...}
+activate RDV
+
+RDV -> DB : Rechercher RDV par numRdv
+activate DB
+DB -> SQL : SELECT * FROM tab_RDV_patient\nWHERE num_rdv = ?
+activate SQL
+SQL --> DB : RdvPatient ou null
+deactivate SQL
+DB --> RDV : RDV trouvé ou non
+deactivate DB
+
+alt RDV non trouvé
+    RDV --> FE : 404 Not Found
+    FE --> User : "Rendez-vous introuvable"
+else RDV trouvé
+    RDV -> RDV : Vérifier conflits\n(même logique que création)
+    RDV -> DB : Mettre à jour le RDV
+    activate DB
+    DB -> SQL : UPDATE tab_RDV_patient\nSET ... WHERE num_rdv = ?
+    activate SQL
+    SQL --> DB : OK
+    deactivate SQL
+    DB --> RDV : RDV mis à jour
+    deactivate DB
+    RDV --> FE : 200 OK\n{rdv mis à jour}
+    FE --> User : "RDV modifié avec succès"
+end
+deactivate RDV
+deactivate FE
+
+== Supprimer un rendez-vous ==
+
+User -> FE : Supprimer un RDV
+activate FE
+FE -> RDV : DELETE /api/RendezVous/{numRdv}
+activate RDV
+
+RDV -> DB : Rechercher RDV par numRdv
+activate DB
+DB -> SQL : SELECT * FROM tab_RDV_patient\nWHERE num_rdv = ?
+activate SQL
+SQL --> DB : RdvPatient ou null
+deactivate SQL
+DB --> RDV : Résultat
+deactivate DB
+
+alt RDV non trouvé
+    RDV --> FE : 404 Not Found
+    FE --> User : "Rendez-vous introuvable"
+else RDV trouvé
+    RDV -> DB : Supprimer le RDV
+    activate DB
+    DB -> SQL : DELETE FROM tab_RDV_patient\nWHERE num_rdv = ?
+    activate SQL
+    SQL --> DB : OK
+    deactivate SQL
+    DB --> RDV : Supprimé
+    deactivate DB
+    RDV --> FE : 204 No Content
+    FE --> User : "RDV supprimé"
+end
+deactivate RDV
+deactivate FE
+
+@enduml

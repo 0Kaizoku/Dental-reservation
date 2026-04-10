@@ -1,0 +1,284 @@
+@startuml Diagramme_Classes
+
+skinparam class {
+    BackgroundColor #FAFAFA
+    BorderColor #333333
+    ArrowColor #333333
+    FontSize 12
+}
+skinparam linetype ortho
+
+' ══════════════════════════════════════
+'  ENTITÉS (Tables de la base de données)
+' ══════════════════════════════════════
+
+class User <<Entity>> {
+    - username : string <<PK>>
+    - lastName : string?
+    - password : string
+    - userType : string?
+    __
+    Table: Usercmim
+}
+
+class PopPersonne <<Entity>> {
+    - idNumPersonne : int <<PK, Identity>>
+    - nomPer : string?
+    - prenomPer : string?
+    - dateNaissancePer : DateTime?
+    - dateDecesPer : DateTime?
+    - codeSexePer : string?
+    - codeCivilitePer : string?
+    - idNumFamillePer : double?
+    - codeQualitePersonnePer : string?
+    - codeStatutPer : string?
+    - codeSituationFamilialePer : string?
+    - idNumAdressePer : double?
+    - numSecuOdPer : string?
+    - codeCollectivitePer : string?
+    - autorisation : string?
+    - cin : string?
+    - email : string?
+    - phone : string?
+    __
+    Table: pop_personne
+}
+
+class PopAdresseP <<Entity>> {
+    - idNumAdressePer : double <<PK>>
+    - auxiliaireAdresse1Per : string?
+    - auxiliaireAdresse2Per : string?
+    - nomLieuDitPer : string?
+    __
+    Table: pop_adresse_p
+}
+
+class PopContratPersonne <<Entity>> {
+    - idNumPersonneCtt : double <<PK>>
+    - dateDebutContrat : DateTime?
+    - dateFinContrat : DateTime?
+    - codeProduit : string?
+    __
+    Table: pop_contrat_personne
+}
+
+class Collectivite <<Entity>> {
+    - codeCollectivite : string <<PK>>
+    - raisonSociale : string?
+    - adresse : string?
+    - ville : string?
+    __
+    Table: collectivite
+}
+
+class RdvPatient <<Entity>> {
+    - numRdv : int <<PK, Identity>>
+    - idPersonne : int?
+    - numCabinet : string?
+    - dateRdv : DateTime?
+    - heure : string?
+    - duree : string?
+    - observation : string?
+    - nomPs : string?
+    - dateSuppression : string?
+    - natureSoin : string?
+    - nomPer : string?
+    - qualitePer : string?
+    - collectivitePe : string?
+    - agent : string?
+    - nomAssure : string?
+    - status : string?
+    __
+    Table: tab_RDV_patient
+}
+
+class RdvPra <<Entity>> {
+    - numEnregistrement : int?
+    - nomPra : string?
+    - cabinet : string?
+    - dateRdv : DateTime?
+    - natureSoin : string?
+    __
+    Table: tab_RDV_Pra
+    <<Keyless>>
+}
+
+class Praticien <<Entity>> {
+    - codPra : double? <<PK>>
+    - nomPra : string?
+    - codePs : double?
+    __
+    Table: Praticien_D
+}
+
+' ══════════════════════════════════════
+'  DTOs (Data Transfer Objects)
+' ══════════════════════════════════════
+
+class LoginDto <<DTO>> {
+    + username : string
+    + password : string
+}
+
+class PatientDto <<DTO>> {
+    + id : int
+    + name : string
+    + email : string
+    + phone : string
+    + dateOfBirth : string
+    + gender : string
+    + lastVisit : string
+    + nextAppointment : string
+    + status : string
+    + medicalHistory : string[]
+    + insurance : string
+    + emergencyContact : EmergencyContactDto
+}
+
+class EmergencyContactDto <<DTO>> {
+    + name : string
+    + phone : string
+    + relationship : string
+}
+
+class AssureDto <<DTO>> {
+    + idFamille : double?
+    + nom : string?
+    + dateNaissance : DateTime?
+    + codeProduit : string?
+    + matricule : string?
+    + nCin : string?
+    + libProduit : string?
+}
+
+class BeneficiaireDto <<DTO>> {
+    + idFamille : double?
+    + nom : string?
+    + dateNaissance : DateTime?
+    + adresse : string?
+    + matricule : string?
+    + nCin : string?
+    + etatBnf : string?
+    + qualite : string?
+    + ville : string?
+}
+
+class CollectiviteDto <<DTO>> {
+    + codeCollectivite : string?
+    + raisonSociale : string?
+    + adresse : string?
+    + ville : string?
+}
+
+' ══════════════════════════════════════
+'  CONTROLLERS
+' ══════════════════════════════════════
+
+class AuthController <<Controller>> {
+    - _context : ApplicationDbContext
+    - _configuration : IConfiguration
+    __
+    + Login(loginDto : LoginDto) : IActionResult
+}
+
+class PatientsController <<Controller>> {
+    - _context : ApplicationDbContext
+    __
+    + GetAll(name?, status?) : IActionResult
+    + GetById(id : int) : IActionResult
+    + GetStats() : IActionResult
+    + GetDossier(id : int) : IActionResult
+    + Create(dto : CreatePatientDto) : IActionResult
+    + Update(id : int, dto : UpdatePatientDto) : IActionResult
+    + Delete(id : int) : IActionResult
+}
+
+class RendezVousController <<Controller>> {
+    - _context : ApplicationDbContext
+    __
+    + GetAll(patient?, doctor?, date?) : IActionResult
+    + GetRdvByMatricule(matricule : string) : IActionResult
+    + CreateAppointment(newRdv : RdvPatient) : IActionResult
+    + UpdateAppointment(num_rdv : int, updatedRdv : RdvPatient) : IActionResult
+    + DeleteAppointment(num_rdv : int) : IActionResult
+    + GetAvailableSlots(doctor, cabinet, date) : IActionResult
+    + GetByDoctorAndDateRange(doctor, startDate, endDate) : IActionResult
+}
+
+class PraticienController <<Controller>> {
+    - _context : ApplicationDbContext
+    __
+    + GetAll() : IActionResult
+}
+
+class ProfileController <<Controller>> {
+    - _context : ApplicationDbContext
+    __
+    + GetMe() : IActionResult
+    + UpdateMe(dto : UpdateProfileDto) : IActionResult
+    + ChangePassword(dto : ChangePasswordDto) : IActionResult
+}
+
+class InformationController <<Controller>> {
+    - _context : ApplicationDbContext
+    __
+    + GetBeneficiaire(matricule : string) : BeneficiaireDto
+    + GetAssure(matricule : string) : AssureDto
+    + GetCollectivite(code : string) : CollectiviteDto
+}
+
+class ListeAttenteController <<Controller>> {
+    - _context : ApplicationDbContext
+    __
+    + GetByDoctorAndDate(doctor, date) : IActionResult
+}
+
+' ══════════════════════════════════════
+'  DATA ACCESS
+' ══════════════════════════════════════
+
+class ApplicationDbContext <<DbContext>> {
+    + Users : DbSet<User>
+    + PopPersonnes : DbSet<PopPersonne>
+    + PopContratPersonnes : DbSet<PopContratPersonne>
+    + PopAdressePs : DbSet<PopAdresseP>
+    + collectivites : DbSet<Collectivite>
+    + RdvPatients : DbSet<RdvPatient>
+    + RdvPras : DbSet<RdvPra>
+    + Praticiens : DbSet<Praticien>
+    __
+    # OnModelCreating(modelBuilder)
+}
+
+' ══════════════════════════════════════
+'  RELATIONS
+' ══════════════════════════════════════
+
+' Entités
+PopPersonne "1" -- "0..1" PopAdresseP : adresse >
+PopPersonne "1" -- "0..1" PopContratPersonne : contrat >
+PopPersonne "0..*" -- "0..1" Collectivite : appartient à >
+PopPersonne "1" -- "0..*" RdvPatient : a des rendez-vous >
+Praticien "1" -- "0..*" RdvPra : planifie >
+PatientDto *-- EmergencyContactDto
+
+' Controllers → DbContext
+AuthController --> ApplicationDbContext : utilise
+PatientsController --> ApplicationDbContext : utilise
+RendezVousController --> ApplicationDbContext : utilise
+PraticienController --> ApplicationDbContext : utilise
+ProfileController --> ApplicationDbContext : utilise
+InformationController --> ApplicationDbContext : utilise
+ListeAttenteController --> ApplicationDbContext : utilise
+
+' DbContext → Entités
+ApplicationDbContext --> User
+ApplicationDbContext --> PopPersonne
+ApplicationDbContext --> PopAdresseP
+ApplicationDbContext --> PopContratPersonne
+ApplicationDbContext --> Collectivite
+ApplicationDbContext --> RdvPatient
+ApplicationDbContext --> RdvPra
+ApplicationDbContext --> Praticien
+
+@enduml

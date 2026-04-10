@@ -1,0 +1,60 @@
+@startuml Activite_Gestion_Rendez_Vous
+
+skinparam activity {
+    BackgroundColor #E3F2FD
+    BorderColor #1565C0
+    DiamondBackgroundColor #FFF9C4
+    DiamondBorderColor #F57F17
+}
+
+title Diagramme d'Activité — Création d'un Rendez-vous
+
+start
+
+:Praticien accède à la\npage Rendez-vous;
+
+:Sélectionner un médecin,\nun cabinet et une date;
+
+:Requête créneaux disponibles\n(GET /api/RendezVous/available-slots);
+
+:Générer les créneaux\n(08:00 à 17:30, pas de 30 min);
+
+:Récupérer les créneaux\ndéjà réservés depuis la BDD;
+
+:Filtrer les créneaux occupés;
+
+:Afficher les créneaux\ndisponibles;
+
+:Praticien sélectionne un créneau\net remplit le formulaire;
+
+:Envoyer la demande de création\n(POST /api/RendezVous);
+
+if (Date et heure fournis ?) then (Oui)
+    :Vérifier conflit médecin\n(même médecin, même date, même heure);
+
+    if (Conflit médecin ?) then (Oui)
+        :Retourner 409 Conflict\n"Médecin déjà occupé";
+        :Afficher erreur;
+        stop
+    else (Non)
+        :Vérifier conflit cabinet\n(même cabinet, même date, même heure);
+
+        if (Conflit cabinet ?) then (Oui)
+            :Retourner 409 Conflict\n"Cabinet déjà réservé";
+            :Afficher erreur;
+            stop
+        else (Non)
+            :Créer le rendez-vous\n(status = "pending");
+            :Sauvegarder dans la BDD;
+            :Retourner 200 OK\navec les détails du RDV;
+            :Afficher confirmation\n"RDV créé avec succès";
+            stop
+        endif
+    endif
+else (Non)
+    :Retourner 400 Bad Request\n"Date et heure requis";
+    :Afficher erreur de validation;
+    stop
+endif
+
+@enduml

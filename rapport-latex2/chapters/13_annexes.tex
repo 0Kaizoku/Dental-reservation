@@ -1,0 +1,82 @@
+% ============================================================
+%  Annexes — Titre gras centré 24pt Times New Roman
+% ============================================================
+\clearpage
+\thispagestyle{plain}
+
+\vspace*{2cm}
+
+\begin{center}
+{\fontsize{24}{29}\selectfont\bfseries Annexes}
+\end{center}
+\addcontentsline{toc}{chapter}{Annexes}
+
+\vspace{1.5cm}
+
+\section*{A.1~~Structure du projet}
+
+L'arborescence complète du projet \textbf{Dental Reservation} est organisée comme suit~:
+
+\begin{lstlisting}[language={}, caption={Arborescence du projet}]
+Dental-reservation/
+  api/                          # Backend ASP.NET Core 8
+    Controllers/                # 7 controleurs REST
+    Models/                     # 8 entites + DTOs
+    Data/                       # ApplicationDbContext
+    Program.cs                  # Point d'entree
+    appsettings.json            # Configuration
+    Dockerfile                  # Build multi-stage
+  frontend/                     # Frontend React 18
+    src/
+      pages/                    # 8 pages
+      components/               # Composants UI
+      hooks/                    # 3 hooks personnalises
+      lib/                      # ApiService + utils
+    vite.config.ts              # Configuration Vite
+    tailwind.config.ts          # Configuration Tailwind
+    Dockerfile                  # Build multi-stage + Nginx
+  docker-compose.yml            # Orchestration
+  diagrams/                     # 8 diagrammes PlantUML
+\end{lstlisting}
+
+\section*{A.2~~Configuration Docker Compose}
+
+Le fichier \texttt{docker-compose.yml} orchestre les deux services de l'application~:
+
+\begin{lstlisting}[language=yaml, caption={docker-compose.yml}]
+version: "3.8"
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "5057:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+\end{lstlisting}
+
+\section*{A.3~~Fichiers PlantUML}
+
+Les 8 diagrammes UML du projet sont disponibles dans le dossier \texttt{diagrams/}~:
+
+\begin{enumerate}
+    \item \texttt{use\_case\_diagram.puml} --- Diagramme de cas d'utilisation
+    \item \texttt{class\_diagram.puml} --- Diagramme de classes
+    \item \texttt{sequence\_authentification.puml} --- Séquence d'authentification
+    \item \texttt{sequence\_rendez\_vous.puml} --- Séquence de gestion des rendez-vous
+    \item \texttt{sequence\_patients.puml} --- Séquence de gestion des patients
+    \item \texttt{activity\_authentification.puml} --- Activité d'authentification
+    \item \texttt{activity\_rendez\_vous.puml} --- Activité de création d'un rendez-vous
+    \item \texttt{activity\_patients.puml} --- Activité de gestion des patients (CRUD)
+\end{enumerate}
+
+\clearpage
